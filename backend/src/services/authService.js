@@ -106,19 +106,29 @@ async function loginUser(email, password) {
   }
 
   // 4. Sign JWT
-  const token = jwt.sign(
+  const accessToken = jwt.sign(
     {
       userId: user.id,
       email: user.email,
       role: user.role.name,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" },
+    { algorithm: "HS512", expiresIn: process.env.JWT_EXPIRES_IN },
+  );
+
+  const refreshToken = jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      role: user.role.name,
+    },
+    process.env.JWT_SECRET,
+    { algorithm: "HS512", expiresIn: process.env.JWT_REFRESH_EXPIRES_IN },
   );
 
   // 5. Return token + safe user object
   const { passwordHash, ...safeUser } = user;
-  return { token, user: safeUser };
+  return { accessToken, refreshToken, user: safeUser };
 }
 
 module.exports = { registerUser, loginUser };

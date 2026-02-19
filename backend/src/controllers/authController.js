@@ -66,12 +66,15 @@ async function login(req, res) {
   }
 
   try {
-    const { token, user } = await loginUser(email, password);
+    const { accessToken, refreshToken, user } = await loginUser(
+      email,
+      password,
+    );
 
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      data: { token, user },
+      data: { accessToken, refreshToken, user },
     });
   } catch (err) {
     return res.status(err.statusCode || 500).json({
