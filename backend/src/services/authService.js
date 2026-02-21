@@ -131,4 +131,28 @@ async function loginUser(email, password) {
   return { accessToken, refreshToken, user: safeUser };
 }
 
-module.exports = { registerUser, loginUser };
+/**
+ * Get user by ID (safe fields only)
+ * @param {string} userId
+ * @returns {Object} user without passwordHash
+ */
+async function getUserById(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      fullName: true,
+      username: true,
+      email: true,
+      isActive: true,
+      createdAt: true,
+      role: {
+        select: { name: true },
+      },
+    },
+  });
+
+  return user;
+}
+
+module.exports = { registerUser, loginUser, getUserById };

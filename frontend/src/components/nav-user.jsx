@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import {
   BadgeCheck,
   Bell,
@@ -7,7 +6,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
-import { logout } from "@/services/authService";
+import { useAuth } from "@/context/AuthContext";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -28,17 +27,10 @@ import {
 
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
-  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {
-      // even if API call fails, clear local state
-    }
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+    await logout();
   };
 
   return (

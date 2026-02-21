@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { logout } from "@/services/authService";
+import { useAuth } from "@/context/AuthContext";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
@@ -132,16 +132,10 @@ function applyTheme(theme) {
 export default function DashboardLayout() {
   const [activeTheme, setActiveTheme] = useState(THEMES[0]);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {
-      // even if API call fails, clear local state
-    }
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+    await logout();
   };
 
   const handleThemeChange = useCallback((theme) => {
@@ -153,7 +147,7 @@ export default function DashboardLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={user} />
       <SidebarInset>
         {/* ── Header ── */}
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -279,9 +273,17 @@ export default function DashboardLayout() {
                   aria-label="User profile"
                 >
                   <Avatar className="h-full w-full">
-                    <AvatarImage src="/avatars/shadcn.jpg" alt="Admin" />
+                    <AvatarImage
+                      src="/avatars/shadcn.jpg"
+                      alt={user?.fullName || "User"}
+                    />
                     <AvatarFallback className="text-xs font-semibold">
-                      AD
+                      {user?.fullName
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2) || "U"}
                     </AvatarFallback>
                   </Avatar>
                 </button>
@@ -290,15 +292,25 @@ export default function DashboardLayout() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-2 py-2">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="/avatars/shadcn.jpg" alt="Admin" />
+                      <AvatarImage
+                        src="/avatars/shadcn.jpg"
+                        alt={user?.fullName || "User"}
+                      />
                       <AvatarFallback className="rounded-lg text-xs">
-                        AD
+                        {user?.fullName
+                          ?.split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2) || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid text-left text-sm leading-tight">
-                      <span className="truncate font-medium">Admin</span>
+                      <span className="truncate font-medium">
+                        {user?.fullName || "User"}
+                      </span>
                       <span className="truncate text-xs text-muted-foreground">
-                        admin@library.com
+                        {user?.email || ""}
                       </span>
                     </div>
                   </div>

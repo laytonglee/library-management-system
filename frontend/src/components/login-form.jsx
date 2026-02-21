@@ -1,6 +1,8 @@
 import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import {
   Field,
   FieldDescription,
@@ -12,12 +14,38 @@ import { Input } from "@/components/ui/input";
 
 export function LoginForm({ className, ...props }) {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // TODO: call authService.login() and store token
-    navigate("/dashboard");
+
+    if (isSubmitting) {
+      return;
+    }
+
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    try {
+      await login({ email, password });
+      navigate("/dashboard");
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message || "Login failed. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
+
+  // async function handleSubmit(e) {
+  //   e.preventDefault();
+  //   navigate("/dashboard");
+  // }
 
   return (
     <form
@@ -34,7 +62,14 @@ export function LoginForm({ className, ...props }) {
         </div>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" type="email" placeholder="m@example.com" required />
+          <Input
+            id="email"
+            type="email"
+            placeholder="m@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </Field>
         <Field>
           <div className="flex items-center">
@@ -46,10 +81,25 @@ export function LoginForm({ className, ...props }) {
               Forgot your password?
             </a>
           </div>
-          <Input id="password" type="password" required />
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
         </Field>
+        {errorMessage && (
+          <Field>
+            <FieldDescription className="text-destructive">
+              {errorMessage}
+            </FieldDescription>
+          </Field>
+        )}
         <Field>
-          <Button type="submit">Login</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Logging in..." : "Login"}
+          </Button>
         </Field>
         <FieldSeparator>Or continue with</FieldSeparator>
         <Field>
