@@ -41,6 +41,7 @@ model User {
   notifications         Notification[]
   auditLogs             AuditLog[]
   generatedReports      Report[]
+  reservations          Reservation[]
 
   @@map("users")
 }
@@ -67,14 +68,13 @@ model Book {
   publicationYear Int?     @map("publication_year")
   description     String?
   coverImageUrl   String?  @map("cover_image_url")
-  totalCopies     Int      @default(1) @map("total_copies")
-  availableCopies Int      @default(1) @map("available_copies")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   category  Category?  @relation(fields: [categoryId], references: [id])
   copies    BookCopy[]
   auditLogs AuditLog[]
+  reservations Reservation[]
 
   @@map("books")
 }
@@ -145,6 +145,33 @@ enum TransactionStatus {
   OVERDUE
 }
 
+// ─── Reservation ───────────────────────────────────────────────────────────
+model Reservation {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  bookId    Int      @map("book_id")
+  status    ReservationStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+  fulfilledAt DateTime? @map("fulfilled_at")
+  canceledAt DateTime? @map("canceled_at")
+
+  user User @relation(fields: [userId], references: [id])
+  book Book @relation(fields: [bookId], references: [id])
+
+  @@index([userId, status])
+  @@index([bookId, status])
+  @@map("reservations")
+}
+
+enum ReservationStatus {
+  ACTIVE
+  FULFILLED
+  CANCELED
+  EXPIRED
+}
+
+
 // ─── Notifications ───────────────────────────────────────────────────────────
 model Notification {
   id            Int              @id @default(autoincrement())
@@ -178,8 +205,8 @@ model AuditLog {
   ipAddress  String?  @map("ip_address")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  actor User?  @relation(fields: [actorId], references: [id])
-  book  Book?  @relation(fields: [targetId], references: [id])
+  actor User? @relation(fields: [actorId], references: [id])
+  book  Book? @relation(fields: [targetId], references: [id])
 
   @@map("audit_logs")
 }
