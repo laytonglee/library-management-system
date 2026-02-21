@@ -1,5 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +12,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function LoginForm({ className, ...props }) {
   const navigate = useNavigate();
@@ -90,11 +92,11 @@ export function LoginForm({ className, ...props }) {
           />
         </Field>
         {errorMessage && (
-          <Field>
-            <FieldDescription className="text-destructive">
-              {errorMessage}
-            </FieldDescription>
-          </Field>
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Login failed</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
         )}
         <Field>
           <Button type="submit" disabled={isSubmitting}>

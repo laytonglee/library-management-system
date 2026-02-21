@@ -51,16 +51,19 @@ const allNavItems = [
       {
         title: "Dashboard",
         url: "/dashboard",
+        icon: LayoutDashboard,
         permission: PERMISSIONS.VIEW_DASHBOARD,
       },
       {
         title: "Search Catalog",
         url: "/search",
+        icon: Search,
         permission: PERMISSIONS.SEARCH_CATALOG,
       },
       {
         title: "My History",
         url: "/history",
+        icon: Clock,
         permission: PERMISSIONS.VIEW_OWN_HISTORY,
       },
     ],
@@ -73,16 +76,19 @@ const allNavItems = [
       {
         title: "Checkout Book",
         url: "/checkout",
+        icon: BookOpen,
         permission: PERMISSIONS.CHECKOUT_BOOK,
       },
       {
         title: "Return Book",
         url: "/return",
+        icon: ArrowLeftRight,
         permission: PERMISSIONS.RETURN_BOOK,
       },
       {
         title: "Overdue Books",
         url: "/overdue",
+        icon: AlertTriangle,
         permission: PERMISSIONS.VIEW_OVERDUE,
       },
     ],
@@ -95,9 +101,15 @@ const allNavItems = [
       {
         title: "Catalog",
         url: "/catalog",
+        icon: BookCopy,
         permission: PERMISSIONS.MANAGE_CATALOG,
       },
-      { title: "Users", url: "/users", permission: PERMISSIONS.MANAGE_USERS },
+      {
+        title: "Users",
+        url: "/users",
+        icon: Users,
+        permission: PERMISSIONS.MANAGE_USERS,
+      },
     ],
   },
   {
@@ -108,11 +120,13 @@ const allNavItems = [
       {
         title: "Reports",
         url: "/reports",
+        icon: BarChart3,
         permission: PERMISSIONS.VIEW_REPORTS,
       },
       {
         title: "Audit Logs",
         url: "/audit-logs",
+        icon: ScrollText,
         permission: PERMISSIONS.VIEW_AUDIT_LOGS,
       },
     ],
@@ -125,6 +139,7 @@ const allNavItems = [
       {
         title: "Borrowing Policies",
         url: "/settings",
+        icon: Settings2,
         permission: PERMISSIONS.MANAGE_SETTINGS,
       },
     ],
