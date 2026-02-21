@@ -86,12 +86,10 @@ erDiagram
 | `publication_year` | YEAR         | NULLABLE             |
 | `description`      | TEXT         | NULLABLE             |
 | `cover_image_url`  | VARCHAR(500) | NULLABLE             |
-| `total_copies`     | INT          | NOT NULL, DEFAULT 1  |
-| `available_copies` | INT          | NOT NULL, DEFAULT 1  |
 | `created_at`       | TIMESTAMP    | DEFAULT NOW()        |
 | `updated_at`       | TIMESTAMP    | ON UPDATE NOW()      |
 
-> **Note:** `available_copies` is updated automatically on checkout/return (REQ-2, REQ-7, REQ-8).
+> **Note:** `total_copies` and `available_copies` are computed from `book_copies` (`COUNT(*)` and `COUNT(status='available')`) and are not stored on `books`.
 
 ---
 

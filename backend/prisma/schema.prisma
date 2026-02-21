@@ -41,6 +41,7 @@ model User {
   notifications         Notification[]
   auditLogs             AuditLog[]
   generatedReports      Report[]
+  reservations          Reservation[]
 
   @@map("users")
 }
@@ -67,14 +68,13 @@ model Book {
   publicationYear Int?     @map("publication_year")
   description     String?
   coverImageUrl   String?  @map("cover_image_url")
-  totalCopies     Int      @default(1) @map("total_copies")
-  availableCopies Int      @default(1) @map("available_copies")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   category  Category?  @relation(fields: [categoryId], references: [id])
   copies    BookCopy[]
   auditLogs AuditLog[]
+  reservations Reservation[]
 
   @@map("books")
 }
@@ -205,10 +205,8 @@ model AuditLog {
   ipAddress  String?  @map("ip_address")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  actor User?  @relation(fields: [actorId], references: [id])
-  book  Book?  @relation(fields: [targetId], references: [id])
-  user        User?                 @relation(fields: [userId], references: [id])
-  transaction BorrowingTransaction? @relation(fields: [transactionId], references: [id])
+  actor User? @relation(fields: [actorId], references: [id])
+  book  Book? @relation(fields: [targetId], references: [id])
 
   @@map("audit_logs")
 }

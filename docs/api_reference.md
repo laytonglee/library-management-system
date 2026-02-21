@@ -91,6 +91,8 @@
 }
 ```
 
+> `total_copies` at create time means "create N `book_copies` rows". Inventory values returned by book endpoints are derived from `book_copies` (not persisted counters on `books`).
+
 ---
 
 ### 🗂️ Categories
