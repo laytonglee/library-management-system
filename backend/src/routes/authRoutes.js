@@ -6,19 +6,30 @@ const {
   logout,
   getMe,
 } = require("../controllers/authController");
-const { authenticateToken } = require("../middleware/authMiddleware");
+const {
+  authenticateToken,
+  authorizeRoles,
+} = require("../middleware/authMiddleware");
 
-// POST /api/auth/register
+// ── Public routes ────────────────────────────────────────────────────────────
+// POST /api/auth/register  — self-registration (student/teacher only)
 router.post("/register", register);
 // POST /api/auth/login
 router.post("/login", login);
+
+// ── Authenticated routes ─────────────────────────────────────────────────────
 // POST /api/auth/logout
-router.post("/logout", logout);
+router.post("/logout", authenticateToken, logout);
 // GET /api/auth/me
 router.get("/me", authenticateToken, getMe);
-// GET /api/auth/test
-router.get("/test", authenticateToken, (req, res) => {
-  res.json({ message: "Auth route is working!" });
-});
+
+// ── Admin-only routes ────────────────────────────────────────────────────────
+// POST /api/auth/register/admin — create user with any role (admin only)
+router.post(
+  "/register/admin",
+  authenticateToken,
+  authorizeRoles("admin"),
+  register,
+);
 
 module.exports = router;
