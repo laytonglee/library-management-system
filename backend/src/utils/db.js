@@ -1,5 +1,5 @@
 // backend/src/utils/db.js
-const { Prisma } = require("@prisma/client");
+const { Prisma, BookCopyStatus } = require("@prisma/client");
 const prisma = require("../config/prisma");
 
 const MAX_TX_RETRIES = 3;
@@ -35,7 +35,6 @@ async function withSerializableTransaction(work) {
 }
 
 async function getBookCounts(bookId, tx = prisma) {
-  const { BookCopyStatus } = require("@prisma/client");
   const [totalCopies, availableCopies] = await Promise.all([
     tx.bookCopy.count({ where: { bookId } }),
     tx.bookCopy.count({ where: { bookId, status: BookCopyStatus.AVAILABLE } }),
