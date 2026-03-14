@@ -14,7 +14,7 @@ function addDays(date, days) {
 
 function calcDaysOverdue(returnDate, dueDate) {
   if (returnDate <= dueDate) return null;
-  return Math.floor((returnDate - dueDate) / (1000 * 60 * 60 * 24));
+  return Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
 }
 
 async function getBorrowingPolicy(tx, borrowerId) {
