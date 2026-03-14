@@ -2,9 +2,9 @@
 const request = require("supertest");
 const app = require("../app");
 
-// Mock bookService so tests don't need a real DB
-jest.mock("../services/bookService");
-const bookService = require("../services/bookService");
+// Mock checkoutService so tests don't need a real DB
+jest.mock("../services/checkoutService");
+const checkoutService = require("../services/checkoutService");
 
 // Mock JWT verification so we can forge tokens
 jest.mock("jsonwebtoken");
@@ -78,7 +78,7 @@ describe("POST /api/transactions/checkout", () => {
   });
 
   it("returns 201 with transaction data on success", async () => {
-    bookService.checkoutBook.mockResolvedValue(mockResult);
+    checkoutService.checkoutBook.mockResolvedValue(mockResult);
     const res = await request(app)
       .post("/api/transactions/checkout")
       .set("Cookie", "accessToken=fake")
@@ -86,7 +86,7 @@ describe("POST /api/transactions/checkout", () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.transaction.id).toBe(99);
-    expect(bookService.checkoutBook).toHaveBeenCalledWith(
+    expect(checkoutService.checkoutBook).toHaveBeenCalledWith(
       expect.objectContaining({ borrowerId: 1, bookCopyId: 10, librarianId: 42 })
     );
   });
@@ -94,7 +94,7 @@ describe("POST /api/transactions/checkout", () => {
   it("forwards service errors with their status code", async () => {
     const err = new Error("Book copy is not available for checkout");
     err.statusCode = 409;
-    bookService.checkoutBook.mockRejectedValue(err);
+    checkoutService.checkoutBook.mockRejectedValue(err);
     const res = await request(app)
       .post("/api/transactions/checkout")
       .set("Cookie", "accessToken=fake")
@@ -151,7 +151,7 @@ describe("POST /api/transactions/return", () => {
   });
 
   it("returns 200 with transaction data on success", async () => {
-    bookService.returnBook.mockResolvedValue(mockResult);
+    checkoutService.returnBook.mockResolvedValue(mockResult);
     const res = await request(app)
       .post("/api/transactions/return")
       .set("Cookie", "accessToken=fake")
@@ -159,7 +159,7 @@ describe("POST /api/transactions/return", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.transaction.id).toBe(99);
-    expect(bookService.returnBook).toHaveBeenCalledWith(
+    expect(checkoutService.returnBook).toHaveBeenCalledWith(
       expect.objectContaining({ bookCopyId: 10 })
     );
   });
@@ -167,12 +167,26 @@ describe("POST /api/transactions/return", () => {
   it("forwards service errors with their status code", async () => {
     const err = new Error("No active borrowing transaction found for this copy");
     err.statusCode = 409;
-    bookService.returnBook.mockRejectedValue(err);
+    checkoutService.returnBook.mockRejectedValue(err);
     const res = await request(app)
       .post("/api/transactions/return")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(409);
     expect(res.body.success).toBe(false);
+  });
+
+  it("returns 200 with daysOverdue null when returned on time", async () => {
+    const onTimeResult = {
+      ...mockResult,
+      transaction: { ...mockResult.transaction, daysOverdue: null },
+    };
+    checkoutService.returnBook.mockResolvedValue(onTimeResult);
+    const res = await request(app)
+      .post("/api/transactions/return")
+      .set("Cookie", "accessToken=fake")
+      .send(validBody);
+    expect(res.status).toBe(200);
+    expect(res.body.data.transaction.daysOverdue).toBeNull();
   });
 });

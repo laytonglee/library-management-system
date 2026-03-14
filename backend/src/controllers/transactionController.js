@@ -1,5 +1,5 @@
 // backend/src/controllers/transactionController.js
-const { checkoutBook, returnBook } = require("../services/bookService");
+const { checkoutBook, returnBook } = require("../services/checkoutService");
 
 /**
  * POST /api/transactions/checkout
