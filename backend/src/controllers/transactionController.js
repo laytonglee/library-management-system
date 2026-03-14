@@ -55,6 +55,7 @@ async function returnBookHandler(req, res) {
   try {
     const result = await returnBook({
       bookCopyId,
+      librarianId: req.user.userId,
       notes,
       ipAddress: req.ip,
     });

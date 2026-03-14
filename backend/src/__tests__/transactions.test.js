@@ -160,7 +160,7 @@ describe("POST /api/transactions/return", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.transaction.id).toBe(99);
     expect(checkoutService.returnBook).toHaveBeenCalledWith(
-      expect.objectContaining({ bookCopyId: 10 })
+      expect.objectContaining({ bookCopyId: 10, librarianId: 42 })
     );
   });
 
