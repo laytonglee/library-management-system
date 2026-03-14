@@ -122,8 +122,22 @@ async function returnBook({
   ipAddress,
 }) {
   if (!bookCopyId) throw createError("bookCopyId is required", 400);
+  if (!librarianId) throw createError("librarianId is required", 400);
 
   return withSerializableTransaction(async (tx) => {
+    const librarian = await tx.user.findUnique({
+      where: { id: librarianId },
+      select: { id: true, isActive: true },
+    });
+
+    if (!librarian) {
+      throw createError("Librarian not found", 404);
+    }
+
+    if (!librarian.isActive) {
+      throw createError("Librarian account is deactivated", 403);
+    }
+
     const activeTransaction = await tx.borrowingTransaction.findFirst({
       where: { bookCopyId, status: TransactionStatus.ACTIVE },
       orderBy: { checkoutDate: "desc" },
@@ -162,7 +176,7 @@ async function returnBook({
     const counts = await getBookCounts(transaction.bookCopy.book.id, tx);
 
     await auditLogger.log(tx, {
-      actorId: librarianId ?? null,
+      actorId: librarian.id,
       action: "RETURN",
       targetType: "transaction",
       details: { transactionId: transaction.id, bookCopyId, returnDate: transaction.returnDate, daysOverdue },
