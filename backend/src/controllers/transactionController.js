@@ -2,7 +2,7 @@
 const { checkoutBook, returnBook } = require("../services/checkoutService");
 
 /**
- * POST /api/transactions/checkout
+ * POST /api/v1/transactions/checkout
  * Body: { borrowerId, bookCopyId, notes? }
  * librarianId is taken from the authenticated user (req.user.userId)
  */
@@ -39,7 +39,7 @@ async function checkout(req, res) {
 }
 
 /**
- * POST /api/transactions/return
+ * POST /api/v1/transactions/return
  * Body: { bookCopyId, notes? }
  */
 async function returnBookHandler(req, res) {
