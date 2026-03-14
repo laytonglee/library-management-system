@@ -23,7 +23,7 @@ beforeEach(() => {
 
 // ── Checkout ────────────────────────────────────────────────────────────────
 
-describe("POST /api/transactions/checkout", () => {
+describe("POST /api/v1/transactions/checkout", () => {
   const validBody = { borrowerId: 1, bookCopyId: 10 };
 
   const mockResult = {
@@ -44,7 +44,7 @@ describe("POST /api/transactions/checkout", () => {
 
   it("returns 401 when no token provided", async () => {
     jwt.verify.mockImplementation(() => { throw new Error("no token"); });
-    const res = await request(app).post("/api/transactions/checkout").send(validBody);
+    const res = await request(app).post("/api/v1/transactions/checkout").send(validBody);
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
   });
@@ -52,7 +52,7 @@ describe("POST /api/transactions/checkout", () => {
   it("returns 403 when caller is a student", async () => {
     jwt.verify.mockReturnValue(fakeUser("student"));
     const res = await request(app)
-      .post("/api/transactions/checkout")
+      .post("/api/v1/transactions/checkout")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(403);
@@ -61,7 +61,7 @@ describe("POST /api/transactions/checkout", () => {
 
   it("returns 400 when bookCopyId is missing", async () => {
     const res = await request(app)
-      .post("/api/transactions/checkout")
+      .post("/api/v1/transactions/checkout")
       .set("Cookie", "accessToken=fake")
       .send({ borrowerId: 1 });
     expect(res.status).toBe(400);
@@ -70,7 +70,7 @@ describe("POST /api/transactions/checkout", () => {
 
   it("returns 400 when borrowerId is missing", async () => {
     const res = await request(app)
-      .post("/api/transactions/checkout")
+      .post("/api/v1/transactions/checkout")
       .set("Cookie", "accessToken=fake")
       .send({ bookCopyId: 10 });
     expect(res.status).toBe(400);
@@ -80,7 +80,7 @@ describe("POST /api/transactions/checkout", () => {
   it("returns 201 with transaction data on success", async () => {
     checkoutService.checkoutBook.mockResolvedValue(mockResult);
     const res = await request(app)
-      .post("/api/transactions/checkout")
+      .post("/api/v1/transactions/checkout")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(201);
@@ -96,7 +96,7 @@ describe("POST /api/transactions/checkout", () => {
     err.statusCode = 409;
     checkoutService.checkoutBook.mockRejectedValue(err);
     const res = await request(app)
-      .post("/api/transactions/checkout")
+      .post("/api/v1/transactions/checkout")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(409);
@@ -106,7 +106,7 @@ describe("POST /api/transactions/checkout", () => {
 
 // ── Return ───────────────────────────────────────────────────────────────────
 
-describe("POST /api/transactions/return", () => {
+describe("POST /api/v1/transactions/return", () => {
   const validBody = { bookCopyId: 10 };
 
   const mockResult = {
@@ -126,7 +126,7 @@ describe("POST /api/transactions/return", () => {
 
   it("returns 401 when no token provided", async () => {
     jwt.verify.mockImplementation(() => { throw new Error("no token"); });
-    const res = await request(app).post("/api/transactions/return").send(validBody);
+    const res = await request(app).post("/api/v1/transactions/return").send(validBody);
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
   });
@@ -134,7 +134,7 @@ describe("POST /api/transactions/return", () => {
   it("returns 403 when caller is a teacher", async () => {
     jwt.verify.mockReturnValue(fakeUser("teacher"));
     const res = await request(app)
-      .post("/api/transactions/return")
+      .post("/api/v1/transactions/return")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(403);
@@ -143,7 +143,7 @@ describe("POST /api/transactions/return", () => {
 
   it("returns 400 when bookCopyId is missing", async () => {
     const res = await request(app)
-      .post("/api/transactions/return")
+      .post("/api/v1/transactions/return")
       .set("Cookie", "accessToken=fake")
       .send({});
     expect(res.status).toBe(400);
@@ -153,7 +153,7 @@ describe("POST /api/transactions/return", () => {
   it("returns 200 with transaction data on success", async () => {
     checkoutService.returnBook.mockResolvedValue(mockResult);
     const res = await request(app)
-      .post("/api/transactions/return")
+      .post("/api/v1/transactions/return")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(200);
@@ -169,7 +169,7 @@ describe("POST /api/transactions/return", () => {
     err.statusCode = 409;
     checkoutService.returnBook.mockRejectedValue(err);
     const res = await request(app)
-      .post("/api/transactions/return")
+      .post("/api/v1/transactions/return")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(409);
@@ -183,7 +183,7 @@ describe("POST /api/transactions/return", () => {
     };
     checkoutService.returnBook.mockResolvedValue(onTimeResult);
     const res = await request(app)
-      .post("/api/transactions/return")
+      .post("/api/v1/transactions/return")
       .set("Cookie", "accessToken=fake")
       .send(validBody);
     expect(res.status).toBe(200);

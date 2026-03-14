@@ -4,6 +4,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
 const authRoutes = require("./routes/authRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
 
 const app = express();
 app.use(
@@ -17,6 +18,7 @@ app.use(cookieParser());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/v1/transactions", transactionRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
