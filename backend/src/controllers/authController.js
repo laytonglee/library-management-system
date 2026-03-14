@@ -26,8 +26,8 @@ function buildCookieOptions(maxAge) {
 }
 
 /**
- * POST /api/auth/register       — self-registration (student | teacher only)
- * POST /api/auth/register/admin — create any role (admin only, guarded by middleware)
+ * POST /api/v1/auth/register       — self-registration (student | teacher only)
+ * POST /api/v1/auth/register/admin — create any role (admin only, guarded by middleware)
  */
 async function register(req, res) {
   const { full_name, username, email, password, role } = req.body;
@@ -93,7 +93,7 @@ async function register(req, res) {
 }
 
 /**
- * POST /api/auth/login
+ * POST /api/v1/auth/login
  */
 async function login(req, res) {
   const { email, password } = req.body;
@@ -136,7 +136,7 @@ async function login(req, res) {
 }
 
 /**
- * POST /api/auth/logout
+ * POST /api/v1/auth/logout
  */
 async function logout(req, res) {
   const clearCookieOptions = {
@@ -156,7 +156,7 @@ async function logout(req, res) {
 }
 
 /**
- * GET /api/auth/me
+ * GET /api/v1/auth/me
  */
 async function getMe(req, res) {
   try {
