@@ -1,6 +1,7 @@
 const { BookCopyStatus, TransactionStatus } = require("@prisma/client");
 const prisma = require("../config/prisma");
 const { createError, withSerializableTransaction, getBookCounts } = require("../utils/db");
+const auditLogger = require("./auditLogger");
 
 async function getBookById(bookId) {
   const book = await prisma.book.findUnique({
@@ -28,6 +29,8 @@ async function createBook({
   description,
   coverImageUrl,
   totalCopies = 1,
+  actorId,
+  ipAddress,
 }) {
   if (!title || !author) {
     throw createError("title and author are required", 400);
@@ -58,12 +61,21 @@ async function createBook({
       })),
     });
 
+    await auditLogger.log(tx, {
+      actorId,
+      action: "ADD_BOOK",
+      targetType: "book",
+      targetId: book.id,
+      details: { title, author, isbn, totalCopies },
+      ipAddress,
+    });
+
     const counts = await getBookCounts(book.id, tx);
     return { ...book, ...counts };
   });
 }
 
-async function addBookCopy(bookId, { barcode, location, status } = {}) {
+async function addBookCopy(bookId, { barcode, location, status, actorId, ipAddress } = {}) {
   return withSerializableTransaction(async (tx) => {
     const book = await tx.book.findUnique({
       where: { id: bookId },
@@ -83,23 +95,32 @@ async function addBookCopy(bookId, { barcode, location, status } = {}) {
       },
     });
 
+    await auditLogger.log(tx, {
+      actorId,
+      action: "ADD_COPY",
+      targetType: "book",
+      targetId: bookId,
+      details: { copyId: copy.id, barcode, location },
+      ipAddress,
+    });
+
     const counts = await getBookCounts(bookId, tx);
     return { copy, ...counts };
   });
 }
 
-async function updateBookCopy(bookId, copyId, data = {}) {
+async function updateBookCopy(bookId, copyId, data = {}, { actorId, ipAddress } = {}) {
   return withSerializableTransaction(async (tx) => {
     const existing = await tx.bookCopy.findFirst({
       where: { id: copyId, bookId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     if (!existing) {
       throw createError("Book copy not found", 404);
     }
 
-    if (data.status === BookCopyStatus.AVAILABLE) {
+    if (data.status && data.status !== existing.status) {
       const activeTx = await tx.borrowingTransaction.findFirst({
         where: {
           bookCopyId: copyId,
@@ -110,7 +131,7 @@ async function updateBookCopy(bookId, copyId, data = {}) {
 
       if (activeTx) {
         throw createError(
-          "Cannot mark copy as AVAILABLE while borrowing transaction is ACTIVE",
+          "Cannot change copy status while a borrowing transaction is ACTIVE — return the book first",
           409,
         );
       }
@@ -125,6 +146,15 @@ async function updateBookCopy(bookId, copyId, data = {}) {
       },
     });
 
+    await auditLogger.log(tx, {
+      actorId,
+      action: "EDIT_BOOK",
+      targetType: "book",
+      targetId: bookId,
+      details: { copyId, before: { status: existing.status }, after: { barcode: data.barcode, location: data.location, status: data.status } },
+      ipAddress,
+    });
+
     const counts = await getBookCounts(bookId, tx);
     return { copy, ...counts };
   });
@@ -134,6 +164,5 @@ module.exports = {
   addBookCopy,
   createBook,
   getBookById,
-  getBookCounts,
   updateBookCopy,
 };

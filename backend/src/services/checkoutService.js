@@ -106,7 +106,8 @@ async function checkoutBook({
       actorId: librarianId,
       action: "CHECKOUT",
       targetType: "transaction",
-      details: { transactionId: transaction.id, borrowerId, bookCopyId, dueDate: transaction.dueDate },
+      targetId: transaction.id,
+      details: { borrowerId, bookCopyId, dueDate: transaction.dueDate },
       ipAddress,
     });
 
@@ -179,7 +180,8 @@ async function returnBook({
       actorId: librarian.id,
       action: "RETURN",
       targetType: "transaction",
-      details: { transactionId: transaction.id, bookCopyId, returnDate: transaction.returnDate, daysOverdue },
+      targetId: transaction.id,
+      details: { bookCopyId, returnDate: transaction.returnDate, daysOverdue },
       ipAddress,
     });
 
