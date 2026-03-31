@@ -1,3 +1,6 @@
+import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,11 +11,59 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { register } from "@/services/authService";
 
 export function SignupForm({ className, ...props }) {
+  const navigate = useNavigate();
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    try {
+      await register({
+        full_name: fullName,
+        username,
+        email,
+        password,
+      });
+      navigate("/login");
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message ||
+          "Registration failed. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <form
       className={cn("flex flex-col gap-6 border-2 rounded-xl p-6", className)}
+      onSubmit={handleSubmit}
       {...props}
     >
       <FieldGroup>
@@ -24,7 +75,25 @@ export function SignupForm({ className, ...props }) {
         </div>
         <Field>
           <FieldLabel htmlFor="name">Full Name</FieldLabel>
-          <Input id="name" type="text" placeholder="John Doe" required />
+          <Input
+            id="name"
+            type="text"
+            placeholder="John Doe"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="username">Username</FieldLabel>
+          <Input
+            id="username"
+            type="text"
+            placeholder="johndoe"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
         </Field>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -32,23 +101,46 @@ export function SignupForm({ className, ...props }) {
             id="email"
             type="email"
             placeholder="email@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </Field>
         <Field>
           <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input id="password" type="password" required />
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
           <FieldDescription>
             Must be at least 8 characters long.
           </FieldDescription>
         </Field>
         <Field>
           <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
-          <Input id="confirm-password" type="password" required />
+          <Input
+            id="confirm-password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
           <FieldDescription>Please confirm your password.</FieldDescription>
         </Field>
+        {errorMessage && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Registration failed</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
         <Field>
-          <Button type="submit">Create Account</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating account..." : "Create Account"}
+          </Button>
         </Field>
         <FieldSeparator>Or continue with</FieldSeparator>
         <Field>
@@ -61,8 +153,11 @@ export function SignupForm({ className, ...props }) {
             </svg>
             Sign up with GitHub
           </Button>
-          <FieldDescription className="px-6 text-center">
-            Already have an account? <a href="/login">Sign in</a>
+          <FieldDescription className="text-center">
+            Already have an account?{" "}
+            <Link to="/login" className="underline underline-offset-4">
+              Sign in
+            </Link>
           </FieldDescription>
         </Field>
       </FieldGroup>
