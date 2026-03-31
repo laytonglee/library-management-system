@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200" fill="none">
+  <!-- Background -->
+  <rect width="800" height="1200" fill="#e8edf2"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="650" cy="180" r="70" fill="#d1d9e0" opacity="0.4"/>
+  <circle cx="150" cy="950" r="55" fill="#b8c5d1" opacity="0.3"/>
+  <circle cx="700" cy="700" r="35" fill="#c7d2dd" opacity="0.25"/>
+  
+  <!-- Decorative lines -->
+  <line x1="150" y1="300" x2="280" y2="300" stroke="#c7d2dd" stroke-width="2.5" opacity="0.4"/>
+  <line x1="180" y1="325" x2="320" y2="325" stroke="#d1d9e0" stroke-width="2" opacity="0.3"/>
+  <line x1="570" y1="900" x2="700" y2="900" stroke="#c7d2dd" stroke-width="2.5" opacity="0.4"/>
+  
+  <!-- Shelf - centered and scaled to medium size -->
+  <g transform="translate(400, 580) scale(0.85)">
+    <!-- Shelf base -->
+    <rect x="-200" y="80" width="400" height="10" fill="#a3b4c5" rx="2"/>
+    <rect x="-200" y="90" width="400" height="20" fill="#8a9bac" opacity="0.3" rx="2"/>
+    
+    <!-- Books -->
+    <!-- Book 1 - Dark blue -->
+    <rect x="-180" y="-15" width="48" height="95" fill="#5d7a94" rx="2"/>
+    <rect x="-176" y="-12" width="7" height="88" fill="#7a94ad" opacity="0.3"/>
+    
+    <!-- Book 2 - Teal -->
+    <rect x="-125" y="-28" width="45" height="108" fill="#6b9d9d" rx="2"/>
+    <rect x="-121" y="-24" width="7" height="100" fill="#8bb8b8" opacity="0.3"/>
+    
+    <!-- Book 3 - Rounded blue -->
+    <rect x="-72" y="-8" width="42" height="88" fill="#5d7a94" rx="21"/>
+    
+    <!-- Book 4 - Cream/Beige -->
+    <rect x="-22" y="-32" width="45" height="112" fill="#d9cdb8" rx="2"/>
+    <rect x="-18" y="-28" width="7" height="104" fill="#e8dcc7" opacity="0.4"/>
+    
+    <!-- Book 5 - Dark slate -->
+    <rect x="33" y="-24" width="50" height="104" fill="#4a5d73" rx="2"/>
+    <rect x="37" y="-20" width="7" height="96" fill="#5d7a94" opacity="0.3"/>
+    
+    <!-- Book 6 - Medium blue -->
+    <rect x="92" y="-12" width="46" height="92" fill="#546e87" rx="2"/>
+    <rect x="96" y="-8" width="7" height="84" fill="#6b8aa3" opacity="0.3"/>
+    
+    <!-- Book 7 - Teal leaning -->
+    <g transform="rotate(-15, 165, 32)">
+      <rect x="138" y="-16" width="48" height="96" fill="#6b9d9d" rx="2"/>
+      <rect x="142" y="-12" width="7" height="88" fill="#8bb8b8" opacity="0.3"/>
+    </g>
+    
+    <!-- Desk Lamp -->
+    <g transform="translate(245, 0)">
+      <!-- Lamp base -->
+      <ellipse cx="0" cy="80" rx="22" ry="7" fill="#5d7a94"/>
+      
+      <!-- Lamp arm 1 -->
+      <rect x="-2.5" y="48" width="5" height="32" fill="#6b8aa3" rx="2.5"/>
+      
+      <!-- Joint -->
+      <circle cx="0" cy="48" r="4" fill="#4a5d73"/>
+      
+      <!-- Lamp arm 2 -->
+      <g transform="rotate(-35, 0, 48)">
+        <rect x="-2.5" y="8" width="5" height="40" fill="#6b8aa3" rx="2.5"/>
+      </g>
+      
+      <!-- Lampshade -->
+      <g transform="translate(-22, -8)">
+        <path d="M0,0 L44,0 L52,20 L-8,20 Z" fill="#5d7a94"/>
+        <ellipse cx="22" cy="20" rx="30" ry="6" fill="#4a5d73" opacity="0.3"/>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Subtle bottom decoration -->
+  <circle cx="280" cy="1000" r="45" fill="#d1d9e0" opacity="0.2"/>
+</svg>
