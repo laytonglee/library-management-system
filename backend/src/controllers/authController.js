@@ -181,4 +181,58 @@ async function getMe(req, res) {
   }
 }
 
-module.exports = { register, login, logout, getMe };
+/**
+ * POST /api/v1/auth/refresh
+ * Reads the refreshToken cookie, verifies it, and issues a new accessToken.
+ */
+async function refresh(req, res) {
+  const token = req.cookies?.refreshToken;
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ success: false, message: "No refresh token provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      { algorithms: ["HS512"] },
+    );
+
+    // Make sure the user still exists and is active
+    const user = await getUserById(decoded.userId);
+    if (!user || !user.isActive) {
+      return res
+        .status(401)
+        .json({ success: false, message: "User not found or deactivated" });
+    }
+
+    const accessToken = require("jsonwebtoken").sign(
+      { userId: user.id, email: user.email, role: user.role.name },
+      process.env.JWT_SECRET,
+      { algorithm: "HS512", expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
+    );
+
+    res.cookie(
+      "accessToken",
+      accessToken,
+      buildCookieOptions(getTokenMaxAge(accessToken)),
+    );
+
+    return res.status(200).json({ success: true, message: "Token refreshed" });
+  } catch {
+    // Refresh token is invalid or expired — force re-login
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+    return res
+      .status(401)
+      .json({
+        success: false,
+        message: "Refresh token expired, please log in again",
+      });
+  }
+}
+
+module.exports = { register, login, logout, getMe, refresh };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Card,
@@ -43,298 +43,7 @@ import {
   ChevronsRight,
   X,
 } from "lucide-react";
-
-// ─── Fake API (matches GET /books and GET /categories responses) ─────────────
-
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-
-const MOCK_CATEGORIES = [
-  { id: 1, name: "Computer Science" },
-  { id: 2, name: "Mathematics" },
-  { id: 3, name: "Engineering" },
-  { id: 4, name: "Science Fiction" },
-  { id: 5, name: "Literature" },
-  { id: 6, name: "History" },
-  { id: 7, name: "Physics" },
-  { id: 8, name: "Biology" },
-];
-
-const MOCK_BOOKS = [
-  {
-    id: 1,
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    isbn: "978-0132350884",
-    category_id: 1,
-    category: "Computer Science",
-    publisher: "Prentice Hall",
-    publication_year: 2008,
-    total_copies: 5,
-    available_copies: 2,
-  },
-  {
-    id: 2,
-    title: "Design Patterns",
-    author: "Erich Gamma et al.",
-    isbn: "978-0201633610",
-    category_id: 1,
-    category: "Computer Science",
-    publisher: "Addison-Wesley",
-    publication_year: 1994,
-    total_copies: 3,
-    available_copies: 1,
-  },
-  {
-    id: 3,
-    title: "Introduction to Algorithms",
-    author: "Thomas H. Cormen",
-    isbn: "978-0262033848",
-    category_id: 1,
-    category: "Computer Science",
-    publisher: "MIT Press",
-    publication_year: 2009,
-    total_copies: 4,
-    available_copies: 0,
-  },
-  {
-    id: 4,
-    title: "The Pragmatic Programmer",
-    author: "David Thomas & Andrew Hunt",
-    isbn: "978-0135957059",
-    category_id: 1,
-    category: "Computer Science",
-    publisher: "Addison-Wesley",
-    publication_year: 2019,
-    total_copies: 3,
-    available_copies: 3,
-  },
-  {
-    id: 5,
-    title: "Refactoring",
-    author: "Martin Fowler",
-    isbn: "978-0134757599",
-    category_id: 1,
-    category: "Computer Science",
-    publisher: "Addison-Wesley",
-    publication_year: 2018,
-    total_copies: 2,
-    available_copies: 1,
-  },
-  {
-    id: 6,
-    title: "Calculus: Early Transcendentals",
-    author: "James Stewart",
-    isbn: "978-1285741550",
-    category_id: 2,
-    category: "Mathematics",
-    publisher: "Cengage Learning",
-    publication_year: 2015,
-    total_copies: 6,
-    available_copies: 4,
-  },
-  {
-    id: 7,
-    title: "Linear Algebra Done Right",
-    author: "Sheldon Axler",
-    isbn: "978-3319110790",
-    category_id: 2,
-    category: "Mathematics",
-    publisher: "Springer",
-    publication_year: 2014,
-    total_copies: 3,
-    available_copies: 2,
-  },
-  {
-    id: 8,
-    title: "Discrete Mathematics",
-    author: "Kenneth Rosen",
-    isbn: "978-0073383095",
-    category_id: 2,
-    category: "Mathematics",
-    publisher: "McGraw-Hill",
-    publication_year: 2018,
-    total_copies: 4,
-    available_copies: 1,
-  },
-  {
-    id: 9,
-    title: "Engineering Mechanics: Statics",
-    author: "Russell Hibbeler",
-    isbn: "978-0133918922",
-    category_id: 3,
-    category: "Engineering",
-    publisher: "Pearson",
-    publication_year: 2015,
-    total_copies: 3,
-    available_copies: 2,
-  },
-  {
-    id: 10,
-    title: "Thermodynamics: An Engineering Approach",
-    author: "Yunus Cengel",
-    isbn: "978-0073398174",
-    category_id: 3,
-    category: "Engineering",
-    publisher: "McGraw-Hill",
-    publication_year: 2014,
-    total_copies: 2,
-    available_copies: 0,
-  },
-  {
-    id: 11,
-    title: "Dune",
-    author: "Frank Herbert",
-    isbn: "978-0441172719",
-    category_id: 4,
-    category: "Science Fiction",
-    publisher: "Ace Books",
-    publication_year: 1965,
-    total_copies: 4,
-    available_copies: 3,
-  },
-  {
-    id: 12,
-    title: "Neuromancer",
-    author: "William Gibson",
-    isbn: "978-0441569595",
-    category_id: 4,
-    category: "Science Fiction",
-    publisher: "Ace Books",
-    publication_year: 1984,
-    total_copies: 2,
-    available_copies: 2,
-  },
-  {
-    id: 13,
-    title: "Foundation",
-    author: "Isaac Asimov",
-    isbn: "978-0553293357",
-    category_id: 4,
-    category: "Science Fiction",
-    publisher: "Bantam Books",
-    publication_year: 1951,
-    total_copies: 3,
-    available_copies: 1,
-  },
-  {
-    id: 14,
-    title: "To Kill a Mockingbird",
-    author: "Harper Lee",
-    isbn: "978-0061120084",
-    category_id: 5,
-    category: "Literature",
-    publisher: "Harper Perennial",
-    publication_year: 1960,
-    total_copies: 5,
-    available_copies: 3,
-  },
-  {
-    id: 15,
-    title: "1984",
-    author: "George Orwell",
-    isbn: "978-0451524935",
-    category_id: 5,
-    category: "Literature",
-    publisher: "Signet Classics",
-    publication_year: 1949,
-    total_copies: 4,
-    available_copies: 2,
-  },
-  {
-    id: 16,
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    isbn: "978-0743273565",
-    category_id: 5,
-    category: "Literature",
-    publisher: "Scribner",
-    publication_year: 1925,
-    total_copies: 3,
-    available_copies: 1,
-  },
-  {
-    id: 17,
-    title: "Sapiens: A Brief History of Humankind",
-    author: "Yuval Noah Harari",
-    isbn: "978-0062316097",
-    category_id: 6,
-    category: "History",
-    publisher: "Harper",
-    publication_year: 2015,
-    total_copies: 4,
-    available_copies: 2,
-  },
-  {
-    id: 18,
-    title: "Guns, Germs, and Steel",
-    author: "Jared Diamond",
-    isbn: "978-0393354324",
-    category_id: 6,
-    category: "History",
-    publisher: "W.W. Norton",
-    publication_year: 1997,
-    total_copies: 2,
-    available_copies: 1,
-  },
-  {
-    id: 19,
-    title: "University Physics",
-    author: "Hugh D. Young",
-    isbn: "978-0321696861",
-    category_id: 7,
-    category: "Physics",
-    publisher: "Pearson",
-    publication_year: 2015,
-    total_copies: 5,
-    available_copies: 3,
-  },
-  {
-    id: 20,
-    title: "Molecular Biology of the Cell",
-    author: "Bruce Alberts",
-    isbn: "978-0815344322",
-    category_id: 8,
-    category: "Biology",
-    publisher: "W.W. Norton",
-    publication_year: 2014,
-    total_copies: 3,
-    available_copies: 2,
-  },
-];
-
-async function fakeFetchBooks({ q, category_id, status, page, limit }) {
-  await delay(600);
-  let filtered = [...MOCK_BOOKS];
-
-  if (q) {
-    const lower = q.toLowerCase();
-    filtered = filtered.filter(
-      (b) =>
-        b.title.toLowerCase().includes(lower) ||
-        b.author.toLowerCase().includes(lower) ||
-        b.isbn.includes(q),
-    );
-  }
-  if (category_id) {
-    filtered = filtered.filter((b) => b.category_id === Number(category_id));
-  }
-  if (status === "available") {
-    filtered = filtered.filter((b) => b.available_copies > 0);
-  } else if (status === "unavailable") {
-    filtered = filtered.filter((b) => b.available_copies === 0);
-  }
-
-  const total = filtered.length;
-  const start = (page - 1) * limit;
-  const data = filtered.slice(start, start + limit);
-
-  return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
-}
-
-async function fakeFetchCategories() {
-  await delay(300);
-  return MOCK_CATEGORIES;
-}
+import { searchBooks, getCategories } from "@/services/bookService";
 
 // ─── Status badge helper ─────────────────────────────────────────────────────
 
@@ -381,7 +90,9 @@ export default function SearchPage() {
 
   // Load categories once
   useEffect(() => {
-    fakeFetchCategories().then(setCategories);
+    getCategories()
+      .then((res) => setCategories(res.data.data || []))
+      .catch(() => {});
   }, []);
 
   // Fetch books when filters change
@@ -389,19 +100,23 @@ export default function SearchPage() {
     let cancelled = false;
     setLoading(true);
 
-    fakeFetchBooks({
-      q: query || undefined,
-      category_id: categoryFilter !== "all" ? categoryFilter : undefined,
-      status: statusFilter !== "all" ? statusFilter : undefined,
-      page,
-      limit,
-    }).then((res) => {
-      if (cancelled) return;
-      setBooks(res.data);
-      setTotal(res.total);
-      setTotalPages(res.totalPages);
-      setLoading(false);
-    });
+    const params = { page, limit };
+    if (query) params.search = query;
+    if (categoryFilter !== "all") params.categoryId = categoryFilter;
+    if (statusFilter !== "all") params.availability = statusFilter;
+
+    searchBooks(params)
+      .then((res) => {
+        if (cancelled) return;
+        const { data, pagination } = res.data;
+        setBooks(data);
+        setTotal(pagination.total);
+        setTotalPages(pagination.totalPages);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -581,18 +296,18 @@ export default function SearchPage() {
                         {book.isbn}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        <Badge variant="outline">{book.category}</Badge>
+                        <Badge variant="outline">{book.category?.name}</Badge>
                       </TableCell>
                       <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                         {book.publisher}
                       </TableCell>
                       <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                        {book.publication_year}
+                        {book.publicationYear}
                       </TableCell>
                       <TableCell>
                         <AvailabilityBadge
-                          available={book.available_copies}
-                          total={book.total_copies}
+                          available={book.availableCopies}
+                          total={book.totalCopies}
                         />
                       </TableCell>
                       <TableCell>
