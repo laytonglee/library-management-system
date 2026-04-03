@@ -8,14 +8,20 @@ const {
   deactivateUser,
   deleteUser,
   borrowingHistory,
+  searchBorrowers,
 } = require("../controllers/userController");
 const {
   authenticateToken,
   requirePermission,
 } = require("../middleware/authMiddleware");
 
-// All user management routes require auth + manage_users permission
+// All user routes require authentication
 router.use(authenticateToken);
+
+// GET /api/v1/users/search — lightweight borrower lookup for checkout (librarian+)
+router.get("/search", requirePermission("checkout_book"), searchBorrowers);
+
+// All remaining routes require manage_users
 router.use(requirePermission("manage_users"));
 
 // GET /api/v1/users

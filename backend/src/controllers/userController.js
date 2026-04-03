@@ -181,6 +181,18 @@ async function updateBorrowingPolicy(req, res) {
   }
 }
 
+async function searchBorrowers(req, res) {
+  try {
+    const { q, limit = 8 } = req.query;
+    const result = await userService.listUsers({ search: q, limit });
+    return res.json({ success: true, data: result.users });
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ success: false, message: err.message || "Internal server error" });
+  }
+}
+
 module.exports = {
   listUsers,
   getUser,
@@ -192,4 +204,5 @@ module.exports = {
   listRoles,
   listBorrowingPolicies,
   updateBorrowingPolicy,
+  searchBorrowers,
 };

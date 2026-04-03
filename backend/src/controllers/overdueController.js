@@ -5,7 +5,7 @@ async function listOverdue(req, res) {
     const result = await overdueService.listOverdue(req.query);
     return res.json({
       success: true,
-      data: result.data,
+      data: result.overdue,
       pagination: result.pagination,
     });
   } catch (err) {
