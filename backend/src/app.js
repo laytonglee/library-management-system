@@ -17,12 +17,42 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const reservationRoutes = require("./routes/reservationRoutes");
 
 const app = express();
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+
+  const configuredOrigins = new Set(
+    [
+      process.env.FRONTEND_URL,
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+    ].filter(Boolean),
+  );
+
+  if (configuredOrigins.has(origin)) {
+    return true;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+
+  try {
+    const url = new URL(origin);
+    return ["localhost", "127.0.0.1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   cors({
-    origin: [
-      process.env.FRONTEND_URL || "http://localhost:5173",
-      "http://127.0.0.1:5173",
-    ],
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
     credentials: true,
   }),
 );

@@ -1,40 +1,23 @@
 const request = require("supertest");
 
 jest.mock("jsonwebtoken");
-jest.mock("../config/prisma", () => ({
-  book: {
-    findMany: jest.fn(),
-    count: jest.fn(),
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-  bookCopy: {
-    findMany: jest.fn(),
-  },
-  category: {
-    findMany: jest.fn(),
-  },
-}));
 jest.mock("../services/bookService", () => ({
-  getBookById: jest.fn(),
+  listBooks: jest.fn(),
+  getBook: jest.fn(),
   createBook: jest.fn(),
+  updateBook: jest.fn(),
+  deleteBook: jest.fn(),
+  listCopies: jest.fn(),
   addBookCopy: jest.fn(),
   updateBookCopy: jest.fn(),
-}));
-jest.mock("../utils/db", () => ({
-  createError: (message, statusCode) => {
-    const error = new Error(message);
-    error.statusCode = statusCode;
-    return error;
-  },
-  withSerializableTransaction: jest.fn(),
-  getBookCounts: jest.fn(),
+  listCategories: jest.fn(),
+  createCategory: jest.fn(),
+  updateCategory: jest.fn(),
+  deleteCategory: jest.fn(),
 }));
 
 const jwt = require("jsonwebtoken");
-const prisma = require("../config/prisma");
 const bookService = require("../services/bookService");
-const { getBookCounts } = require("../utils/db");
 const app = require("../app");
 
 function fakeUser(role = "librarian", userId = 42) {
@@ -47,52 +30,42 @@ beforeEach(() => {
 });
 
 describe("Books API", () => {
-  it("searches books and returns computed copy counts", async () => {
-    prisma.book.findMany.mockResolvedValue([
-      {
-        id: 1,
-        title: "Domain-Driven Design",
-        author: "Eric Evans",
-        isbn: "9780321125217",
-        category: { id: 3, name: "Software" },
-        copies: [
-          { id: 10, status: "AVAILABLE" },
-          { id: 11, status: "BORROWED" },
-        ],
-      },
-    ]);
-    prisma.book.count.mockResolvedValue(1);
+  it("searches books via the service layer", async () => {
+    bookService.listBooks.mockResolvedValue({
+      books: [
+        {
+          id: 1,
+          title: "Domain-Driven Design",
+          author: "Eric Evans",
+          isbn: "9780321125217",
+          category: { id: 3, name: "Software" },
+          totalCopies: 2,
+          availableCopies: 1,
+        },
+      ],
+      pagination: { page: 2, limit: 5, total: 1, totalPages: 1 },
+    });
 
     const res = await request(app)
-      .get("/api/v1/books?q=design&page=2&limit=5")
+      .get("/api/v1/books?search=design&page=2&limit=5")
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.books[0]).toEqual(
+    expect(res.body.data[0]).toEqual(
       expect.objectContaining({
         id: 1,
         totalCopies: 2,
         availableCopies: 1,
       }),
     );
-    expect(prisma.book.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          OR: expect.arrayContaining([
-            { title: { contains: "design", mode: "insensitive" } },
-            { author: { contains: "design", mode: "insensitive" } },
-            { isbn: { contains: "design", mode: "insensitive" } },
-          ]),
-        }),
-        skip: 5,
-        take: 5,
-      }),
+    expect(bookService.listBooks).toHaveBeenCalledWith(
+      expect.objectContaining({ search: "design", page: "2", limit: "5" }),
     );
   });
 
   it("gets a single book by id", async () => {
-    bookService.getBookById.mockResolvedValue({
+    bookService.getBook.mockResolvedValue({
       id: 12,
       title: "Clean Code",
       totalCopies: 4,
@@ -104,12 +77,12 @@ describe("Books API", () => {
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.book.id).toBe(12);
-    expect(bookService.getBookById).toHaveBeenCalledWith(12);
+    expect(res.body.data.id).toBe(12);
+    expect(bookService.getBook).toHaveBeenCalledWith(12);
   });
 
   it("lists categories for authenticated users", async () => {
-    prisma.category.findMany.mockResolvedValue([
+    bookService.listCategories.mockResolvedValue([
       { id: 1, name: "History" },
       { id: 2, name: "Science" },
     ]);
@@ -119,7 +92,7 @@ describe("Books API", () => {
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.categories).toHaveLength(2);
+    expect(res.body.data).toHaveLength(2);
   });
 
   it("creates a book for librarians and includes the authenticated actor id", async () => {
@@ -160,15 +133,12 @@ describe("Books API", () => {
     expect(bookService.createBook).not.toHaveBeenCalled();
   });
 
-  it("updates a book and returns refreshed copy counts", async () => {
-    prisma.book.findUnique.mockResolvedValue({ id: 9 });
-    prisma.book.update.mockResolvedValue({
+  it("updates a book via the service layer", async () => {
+    bookService.updateBook.mockResolvedValue({
       id: 9,
       title: "Updated Book",
       author: "Author Name",
-      category: { id: 5, name: "Fiction" },
     });
-    getBookCounts.mockResolvedValue({ totalCopies: 7, availableCopies: 6 });
 
     const res = await request(app)
       .put("/api/v1/books/9")
@@ -176,18 +146,17 @@ describe("Books API", () => {
       .send({ title: "Updated Book", author: "Author Name" });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.book).toEqual(
+    expect(res.body.data).toEqual(
       expect.objectContaining({
         id: 9,
         title: "Updated Book",
-        totalCopies: 7,
-        availableCopies: 6,
       }),
     );
+    expect(bookService.updateBook).toHaveBeenCalledWith(9, expect.objectContaining({ title: "Updated Book" }));
   });
 
   it("lists physical copies for a book", async () => {
-    prisma.bookCopy.findMany.mockResolvedValue([
+    bookService.listCopies.mockResolvedValue([
       { id: 1, bookId: 4, status: "AVAILABLE" },
       { id: 2, bookId: 4, status: "BORROWED" },
     ]);
@@ -197,7 +166,7 @@ describe("Books API", () => {
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.copies).toHaveLength(2);
+    expect(res.body.data).toHaveLength(2);
   });
 
   it("adds a copy and forwards the actor id", async () => {

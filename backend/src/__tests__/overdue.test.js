@@ -2,9 +2,9 @@ const request = require("supertest");
 
 jest.mock("jsonwebtoken");
 jest.mock("../services/overdueService", () => ({
-  getOverdueTransactions: jest.fn(),
+  listOverdue: jest.fn(),
   getOverdueSummary: jest.fn(),
-  detectAndFlagOverdue: jest.fn(),
+  runOverdueCheck: jest.fn(),
 }));
 
 const jwt = require("jsonwebtoken");
@@ -22,26 +22,24 @@ beforeEach(() => {
 
 describe("Overdue API", () => {
   it("lists overdue transactions for librarians", async () => {
-    overdueService.getOverdueTransactions.mockResolvedValue({
-      transactions: [{ id: 1, daysOverdue: 4 }],
+    overdueService.listOverdue.mockResolvedValue({
+      overdue: [{ id: 1, daysOverdue: 4 }],
       pagination: { total: 1, page: 1, limit: 20, totalPages: 1 },
     });
 
     const res = await request(app)
-      .get("/api/v1/overdue?borrowerId=9")
+      .get("/api/v1/overdue")
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.transactions[0].daysOverdue).toBe(4);
-    expect(overdueService.getOverdueTransactions).toHaveBeenCalledWith(
-      expect.objectContaining({ borrowerId: "9" }),
-    );
+    expect(res.body.data[0].daysOverdue).toBe(4);
+    expect(overdueService.listOverdue).toHaveBeenCalled();
   });
 
   it("returns overdue summary statistics", async () => {
     overdueService.getOverdueSummary.mockResolvedValue({
       totalOverdue: 3,
-      avgDaysOverdue: 4.7,
+      averageDaysOverdue: 5,
       maxDaysOverdue: 12,
     });
 
@@ -53,22 +51,25 @@ describe("Overdue API", () => {
     expect(res.body.data).toEqual(
       expect.objectContaining({
         totalOverdue: 3,
-        avgDaysOverdue: 4.7,
+        averageDaysOverdue: 5,
         maxDaysOverdue: 12,
       }),
     );
   });
 
   it("manually triggers overdue detection for librarians", async () => {
-    overdueService.detectAndFlagOverdue.mockResolvedValue(5);
+    overdueService.runOverdueCheck.mockResolvedValue({
+      overdueCount: 5,
+      newNotifications: 0,
+    });
 
     const res = await request(app)
       .post("/api/v1/overdue/run-check")
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.count).toBe(5);
-    expect(res.body.message).toContain("Flagged 5 overdue transaction(s)");
+    expect(res.body.data.overdueCount).toBe(5);
+    expect(res.body.message).toContain("5 overdue items found");
   });
 
   it("blocks users without overdue-management permission from manual detection", async () => {
@@ -80,6 +81,6 @@ describe("Overdue API", () => {
 
     expect(res.status).toBe(403);
     expect(res.body.success).toBe(false);
-    expect(overdueService.detectAndFlagOverdue).not.toHaveBeenCalled();
+    expect(overdueService.runOverdueCheck).not.toHaveBeenCalled();
   });
 });

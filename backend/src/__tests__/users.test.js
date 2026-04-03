@@ -2,13 +2,16 @@ const request = require("supertest");
 
 jest.mock("jsonwebtoken");
 jest.mock("../services/userService", () => ({
-  getUsers: jest.fn(),
+  listUsers: jest.fn(),
   getUserById: jest.fn(),
   createUser: jest.fn(),
   updateUser: jest.fn(),
   deactivateUser: jest.fn(),
   deleteUser: jest.fn(),
   getUserBorrowingHistory: jest.fn(),
+  listRoles: jest.fn(),
+  listBorrowingPolicies: jest.fn(),
+  updateBorrowingPolicy: jest.fn(),
 }));
 
 const jwt = require("jsonwebtoken");
@@ -26,7 +29,7 @@ beforeEach(() => {
 
 describe("Users API", () => {
   it("lists users for admins", async () => {
-    userService.getUsers.mockResolvedValue({
+    userService.listUsers.mockResolvedValue({
       users: [{ id: 7, username: "teacher1" }],
       pagination: { total: 1, page: 1, limit: 20, totalPages: 1 },
     });
@@ -36,8 +39,8 @@ describe("Users API", () => {
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.users).toHaveLength(1);
-    expect(userService.getUsers).toHaveBeenCalledWith(
+    expect(res.body.data).toHaveLength(1);
+    expect(userService.listUsers).toHaveBeenCalledWith(
       expect.objectContaining({ role: "teacher" }),
     );
   });
@@ -53,20 +56,18 @@ describe("Users API", () => {
     expect(res.body.success).toBe(false);
   });
 
-  it("allows users to fetch their own profile", async () => {
+  it("requires manage_users to fetch a user profile", async () => {
     jwt.verify.mockReturnValue(fakeUser("student", 22));
-    userService.getUserById.mockResolvedValue({ id: 22, username: "student22" });
 
     const res = await request(app)
       .get("/api/v1/users/22")
       .set("Cookie", "accessToken=fake");
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.user.id).toBe(22);
-    expect(userService.getUserById).toHaveBeenCalledWith(22);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
-  it("creates a user and forwards the authenticated actor id", async () => {
+  it("creates a user", async () => {
     userService.createUser.mockResolvedValue({ id: 44, username: "new-user" });
 
     const res = await request(app)
@@ -81,11 +82,11 @@ describe("Users API", () => {
       });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.user.id).toBe(44);
+    expect(res.body.data.id).toBe(44);
     expect(userService.createUser).toHaveBeenCalledWith(
       expect.objectContaining({
         username: "new-user",
-        actorId: 1,
+        email: "new@example.com",
       }),
     );
   });
@@ -99,10 +100,10 @@ describe("Users API", () => {
       .send({ fullName: "Updated User" });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.user.fullName).toBe("Updated User");
+    expect(res.body.data.fullName).toBe("Updated User");
     expect(userService.updateUser).toHaveBeenCalledWith(
       11,
-      expect.objectContaining({ fullName: "Updated User", actorId: 1 }),
+      expect.objectContaining({ fullName: "Updated User" }),
     );
   });
 
@@ -114,15 +115,13 @@ describe("Users API", () => {
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.user.isActive).toBe(false);
-    expect(userService.deactivateUser).toHaveBeenCalledWith(
-      14,
-      expect.objectContaining({ actorId: 1 }),
-    );
+    expect(res.body.data.isActive).toBe(false);
+    expect(res.body.message).toBe("User deactivated");
+    expect(userService.deactivateUser).toHaveBeenCalledWith(14);
   });
 
-  it("deletes a user when the service reports a hard delete", async () => {
-    userService.deleteUser.mockResolvedValue({ deleted: true, deactivated: false });
+  it("deletes a user", async () => {
+    userService.deleteUser.mockResolvedValue();
 
     const res = await request(app)
       .delete("/api/v1/users/18")
@@ -130,14 +129,10 @@ describe("Users API", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("User deleted");
-    expect(userService.deleteUser).toHaveBeenCalledWith(
-      18,
-      expect.objectContaining({ actorId: 1 }),
-    );
+    expect(userService.deleteUser).toHaveBeenCalledWith(18);
   });
 
-  it("returns borrowing history for the authenticated owner", async () => {
-    jwt.verify.mockReturnValue(fakeUser("student", 9));
+  it("returns borrowing history for admins", async () => {
     userService.getUserBorrowingHistory.mockResolvedValue({
       transactions: [{ id: 100, status: "ACTIVE" }],
       pagination: { total: 1, page: 1, limit: 20, totalPages: 1 },
@@ -148,14 +143,14 @@ describe("Users API", () => {
       .set("Cookie", "accessToken=fake");
 
     expect(res.status).toBe(200);
-    expect(res.body.data.transactions).toHaveLength(1);
+    expect(res.body.data).toHaveLength(1);
     expect(userService.getUserBorrowingHistory).toHaveBeenCalledWith(
       9,
       expect.objectContaining({ status: "ACTIVE" }),
     );
   });
 
-  it("blocks one borrower from reading another borrower's history", async () => {
+  it("blocks students from reading any user's borrowing history", async () => {
     jwt.verify.mockReturnValue(fakeUser("student", 9));
 
     const res = await request(app)

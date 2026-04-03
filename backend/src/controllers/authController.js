@@ -59,16 +59,16 @@ async function register(req, res) {
   // Self-registration is limited to student/teacher.
   // The admin-only route (/register/admin) skips this check because
   // req.user is set by authenticateToken — meaning an admin is calling.
-  // const SELF_REG_ROLES = ["student", "teacher"];
-  // const requestedRole = role || "student";
-  // const isAdminRoute = !!req.user;
+  const SELF_REG_ROLES = ["student", "teacher"];
+  const requestedRole = role || "student";
+  const isAdminRoute = !!req.user;
 
-  // if (!isAdminRoute && !SELF_REG_ROLES.includes(requestedRole)) {
-  //   return res.status(403).json({
-  //     success: false,
-  //     message: `Self-registration is only allowed for: ${SELF_REG_ROLES.join(", ")}`,
-  //   });
-  // }
+  if (!isAdminRoute && !SELF_REG_ROLES.includes(requestedRole)) {
+    return res.status(403).json({
+      success: false,
+      message: `Self-registration is only allowed for: ${SELF_REG_ROLES.join(", ")}`,
+    });
+  }
 
   try {
     const user = await registerUser({
