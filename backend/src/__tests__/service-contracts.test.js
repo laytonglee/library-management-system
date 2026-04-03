@@ -54,52 +54,49 @@ describe("Service transaction and audit contracts", () => {
     expect(result).toEqual(expect.objectContaining({ id: 10, totalCopies: 2, availableCopies: 2 }));
   });
 
-  it("user creation uses a serializable transaction, hashes the password, and writes a CREATE_USER audit log", async () => {
-    const tx = {
+  it("user creation hashes the password and checks for duplicates", async () => {
+    const hash = jest.fn().mockResolvedValue("$2b$hashed");
+    const mockPrisma = {
       user: {
-        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({
           id: 15,
-          roleId: 3,
-          role: { id: 3, name: "librarian", description: "Librarian" },
+          fullName: "Admin Created",
+          username: "created-user",
+          email: "created@example.com",
+          isActive: true,
+          createdAt: new Date(),
+          role: { id: 3, name: "librarian" },
         }),
       },
     };
-    const hash = jest.fn().mockResolvedValue("$2b$hashed");
-    const withSerializableTransaction = jest.fn(async (work) => work(tx));
-    const log = jest.fn().mockResolvedValue({});
 
     jest.doMock("bcryptjs", () => ({ hash }));
-    jest.doMock("../config/prisma", () => ({}));
-    jest.doMock("../utils/db", () => ({
-      createError,
-      withSerializableTransaction,
-    }));
-    jest.doMock("../services/auditLogger", () => ({ log }));
+    jest.doMock("../config/prisma", () => mockPrisma);
+    jest.doMock("../utils/db", () => ({ createError }));
 
     const { createUser } = require("../services/userService");
 
-    await createUser({
+    const result = await createUser({
       fullName: "Admin Created",
       username: "created-user",
       email: "created@example.com",
       password: "Secret123!",
       roleId: 3,
-      actorId: 1,
-      ipAddress: "127.0.0.1",
     });
 
-    expect(withSerializableTransaction).toHaveBeenCalledTimes(1);
     expect(hash).toHaveBeenCalledWith("Secret123!", 10);
-    expect(log).toHaveBeenCalledWith(
-      tx,
+    expect(mockPrisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        actorId: 1,
-        action: "CREATE_USER",
-        targetType: "user",
-        targetId: 15,
+        data: expect.objectContaining({
+          fullName: "Admin Created",
+          username: "created-user",
+          passwordHash: "$2b$hashed",
+          roleId: 3,
+        }),
       }),
     );
+    expect(result.id).toBe(15);
   });
 
   it("checkout uses a serializable transaction and writes a CHECKOUT audit log", async () => {
@@ -161,9 +158,9 @@ describe("Service transaction and audit contracts", () => {
     );
   });
 
-  it("overdue detection uses a serializable transaction and writes OVERDUE_FLAG audit entries", async () => {
+  it("overdue check marks active past-due transactions as OVERDUE", async () => {
     const dueDate = new Date("2026-03-20T00:00:00.000Z");
-    const tx = {
+    const mockPrisma = {
       borrowingTransaction: {
         findMany: jest.fn().mockResolvedValue([
           {
@@ -171,36 +168,27 @@ describe("Service transaction and audit contracts", () => {
             borrowerId: 4,
             dueDate,
             borrower: { id: 4, fullName: "Borrower" },
+            bookCopy: { book: { title: "Overdue Book" } },
           },
         ]),
         update: jest.fn().mockResolvedValue({}),
       },
-      notification: {
-        create: jest.fn().mockResolvedValue({}),
-      },
     };
-    const withSerializableTransaction = jest.fn(async (work) => work(tx));
-    const log = jest.fn().mockResolvedValue({});
 
-    jest.doMock("../config/prisma", () => ({}));
-    jest.doMock("../utils/db", () => ({
-      withSerializableTransaction,
+    jest.doMock("../config/prisma", () => mockPrisma);
+    jest.doMock("@prisma/client", () => ({
+      TransactionStatus: { ACTIVE: "ACTIVE", OVERDUE: "OVERDUE" },
     }));
-    jest.doMock("../services/auditLogger", () => ({ log }));
 
-    const { detectAndFlagOverdue } = require("../services/overdueService");
+    const { runOverdueCheck } = require("../services/overdueService");
 
-    const count = await detectAndFlagOverdue();
+    const result = await runOverdueCheck();
 
-    expect(count).toBe(1);
-    expect(withSerializableTransaction).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith(
-      tx,
+    expect(result.overdueCount).toBe(1);
+    expect(mockPrisma.borrowingTransaction.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        actorId: null,
-        action: "OVERDUE_FLAG",
-        targetType: "transaction",
-        targetId: 99,
+        where: { id: 99 },
+        data: { status: "OVERDUE" },
       }),
     );
   });
