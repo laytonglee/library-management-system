@@ -1,7 +1,12 @@
 // backend/src/services/checkoutService.js
 const { BookCopyStatus, TransactionStatus } = require("@prisma/client");
-const { createError, withSerializableTransaction, getBookCounts } = require("../utils/db");
+const {
+  createError,
+  withSerializableTransaction,
+  getBookCounts,
+} = require("../utils/db");
 const auditLogger = require("./auditLogger");
+// const { notifyNextInQueue } = require("./reservationService"); // TODO: enable when notifications are ready
 
 const DEFAULT_LOAN_DURATION_DAYS = 14;
 const DEFAULT_MAX_BOOKS_ALLOWED = 3;
@@ -24,7 +29,8 @@ async function getBorrowingPolicy(tx, borrowerId) {
   });
 
   if (!borrower) throw createError("Borrower not found", 404);
-  if (!borrower.isActive) throw createError("Borrower account is deactivated", 403);
+  if (!borrower.isActive)
+    throw createError("Borrower account is deactivated", 403);
 
   const policy = await tx.borrowingPolicy.findUnique({
     where: { roleId: borrower.roleId },
@@ -46,7 +52,10 @@ async function checkoutBook({
   ipAddress,
 }) {
   if (!borrowerId || !librarianId || !bookCopyId) {
-    throw createError("borrowerId, librarianId, and bookCopyId are required", 400);
+    throw createError(
+      "borrowerId, librarianId, and bookCopyId are required",
+      400,
+    );
   }
 
   return withSerializableTransaction(async (tx) => {
@@ -56,7 +65,8 @@ async function checkoutBook({
     });
 
     if (!librarian) throw createError("Librarian not found", 404);
-    if (!librarian.isActive) throw createError("Librarian account is deactivated", 403);
+    if (!librarian.isActive)
+      throw createError("Librarian account is deactivated", 403);
 
     const [policy, activeBorrowCount] = await Promise.all([
       getBorrowingPolicy(tx, borrowerId),
@@ -66,7 +76,10 @@ async function checkoutBook({
     ]);
 
     if (activeBorrowCount >= policy.maxBooksAllowed) {
-      throw createError("Borrower has reached the maximum allowed active loans", 409);
+      throw createError(
+        "Borrower has reached the maximum allowed active loans",
+        409,
+      );
     }
 
     const copy = await tx.bookCopy.findUnique({
@@ -88,12 +101,21 @@ async function checkoutBook({
     const dueDate = addDays(checkoutDate, policy.loanDurationDays);
 
     const transaction = await tx.borrowingTransaction.create({
-      data: { bookCopyId, borrowerId, librarianId, checkoutDate, dueDate, status: TransactionStatus.ACTIVE, notes },
+      data: {
+        bookCopyId,
+        borrowerId,
+        librarianId,
+        checkoutDate,
+        dueDate,
+        status: TransactionStatus.ACTIVE,
+        notes,
+      },
       include: {
         borrower: { select: { id: true, fullName: true, email: true } },
         bookCopy: {
           select: {
-            id: true, barcode: true,
+            id: true,
+            barcode: true,
             book: { select: { id: true, title: true, author: true } },
           },
         },
@@ -146,7 +168,10 @@ async function returnBook({
     });
 
     if (!activeTransaction) {
-      throw createError("No active borrowing transaction found for this copy", 409);
+      throw createError(
+        "No active borrowing transaction found for this copy",
+        409,
+      );
     }
 
     const returnUpdate = await tx.bookCopy.updateMany({
@@ -162,12 +187,18 @@ async function returnBook({
 
     const transaction = await tx.borrowingTransaction.update({
       where: { id: activeTransaction.id },
-      data: { returnDate, status: TransactionStatus.RETURNED, notes, daysOverdue },
+      data: {
+        returnDate,
+        status: TransactionStatus.RETURNED,
+        notes,
+        daysOverdue,
+      },
       include: {
         borrower: { select: { id: true, fullName: true, email: true } },
         bookCopy: {
           select: {
-            id: true, barcode: true,
+            id: true,
+            barcode: true,
             book: { select: { id: true, title: true, author: true } },
           },
         },
@@ -185,7 +216,13 @@ async function returnBook({
       ipAddress,
     });
 
-    return { transaction, inventory: { bookId: transaction.bookCopy.book.id, ...counts } };
+    // TODO: enable when notifications are ready
+    // await notifyNextInQueue(transaction.bookCopy.book.id, tx);
+
+    return {
+      transaction,
+      inventory: { bookId: transaction.bookCopy.book.id, ...counts },
+    };
   });
 }
 

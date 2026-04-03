@@ -5,6 +5,9 @@ import api from "./api";
 // GET /users — list all users
 export const getUsers = (params) => api.get("/users", { params });
 
+// GET /users/search — borrower lookup for checkout (requires checkout_book permission)
+export const searchBorrowers = (q) => api.get("/users/search", { params: { q, limit: 8 } });
+
 // GET /users/:id — get user profile
 export const getUserById = (id) => api.get(`/users/${id}`);
 

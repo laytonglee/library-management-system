@@ -113,7 +113,7 @@ async function loginUser(email, password) {
       role: user.role.name,
     },
     process.env.JWT_SECRET,
-    { algorithm: "HS512", expiresIn: process.env.JWT_EXPIRES_IN },
+    { algorithm: "HS512", expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
   );
 
   const refreshToken = jwt.sign(
@@ -122,8 +122,11 @@ async function loginUser(email, password) {
       email: user.email,
       role: user.role.name,
     },
-    process.env.JWT_SECRET,
-    { algorithm: "HS512", expiresIn: process.env.JWT_REFRESH_EXPIRES_IN },
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    {
+      algorithm: "HS512",
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+    },
   );
 
   // 5. Return token + safe user object

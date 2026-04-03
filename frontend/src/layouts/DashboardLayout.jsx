@@ -1,7 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { AppSidebar } from "@/components/app-sidebar";
+// TODO: enable when notifications are ready
+// import {
+//   getNotifications,
+//   markAllAsRead,
+//   markAsRead,
+// } from "@/services/notificationService";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -111,16 +117,15 @@ const THEMES = [
   },
 ];
 
-const NOTIFICATIONS = [
-  { id: 1, text: "New book return request", time: "2m ago", unread: true },
-  {
-    id: 2,
-    text: "Overdue reminder sent to 3 users",
-    time: "1h ago",
-    unread: true,
-  },
-  { id: 3, text: "New member registered", time: "3h ago", unread: false },
-];
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 function applyTheme(theme) {
   const root = document.documentElement;
@@ -131,8 +136,32 @@ function applyTheme(theme) {
 
 export default function DashboardLayout() {
   const [activeTheme, setActiveTheme] = useState(THEMES[0]);
+  // TODO: enable when notifications are ready
+  // const [notifications, setNotifications] = useState([]);
+  // const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  // TODO: enable when notifications are ready
+  // useEffect(() => {
+  //   if (!user) return;
+  //   async function fetchNotifs() {
+  //     try {
+  //       const { data } = await getNotifications({ limit: 10 });
+  //       setNotifications(data.data);
+  //       setUnreadCount(data.unreadCount);
+  //     } catch {
+  //       // silently ignore polling errors
+  //     }
+  //   }
+  //   fetchNotifs();
+  //   const interval = setInterval(fetchNotifs, 10000);
+  //   return () => clearInterval(interval);
+  // }, [user]);
+
+  // TODO: enable when notifications are ready
+  // async function handleMarkAllRead() { ... }
+  // async function handleMarkOneRead(id) { ... }
 
   const handleLogout = async () => {
     await logout();
@@ -142,8 +171,6 @@ export default function DashboardLayout() {
     setActiveTheme(theme);
     applyTheme(theme);
   }, []);
-
-  const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length;
 
   return (
     <SidebarProvider>
@@ -217,51 +244,14 @@ export default function DashboardLayout() {
                   aria-label="Notifications"
                 >
                   <Bell className="size-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                      {unreadCount}
-                    </span>
-                  )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuLabel className="flex items-center justify-between">
-                  <span>Notifications</span>
-                  {unreadCount > 0 && (
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {unreadCount} unread
-                    </span>
-                  )}
-                </DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {NOTIFICATIONS.map((n) => (
-                  <DropdownMenuItem
-                    key={n.id}
-                    className="flex flex-col items-start gap-0.5 cursor-pointer py-2"
-                  >
-                    <div className="flex w-full items-start gap-2">
-                      {n.unread && (
-                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-blue-500" />
-                      )}
-                      <span
-                        className={`text-sm leading-snug ${
-                          n.unread
-                            ? "font-medium"
-                            : "font-normal text-muted-foreground"
-                        }`}
-                      >
-                        {n.text}
-                      </span>
-                    </div>
-                    <span className="pl-3.5 text-xs text-muted-foreground">
-                      {n.time}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="justify-center text-sm text-muted-foreground cursor-pointer">
-                  View all notifications
-                </DropdownMenuItem>
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Notifications coming soon
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 

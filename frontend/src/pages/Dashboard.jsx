@@ -28,185 +28,9 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
-  Star,
   ArrowUpRight,
 } from "lucide-react";
-
-// ─── Fake API helpers (simulates network delay + realistic data) ─────────────
-
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function fakeFetchStats() {
-  await delay(600);
-  return {
-    totalBooks: 2_847,
-    totalMembers: 1_235,
-    activeLoans: 384,
-    overdueBooks: 23,
-    booksTrend: +5.2,
-    membersTrend: +12.1,
-    loansTrend: -2.4,
-    overdueTrend: +8.3,
-  };
-}
-
-async function fakeFetchRecentTransactions() {
-  await delay(800);
-  return [
-    {
-      id: 1,
-      borrower: "Alice Johnson",
-      book: "Clean Code",
-      type: "checkout",
-      date: "2026-02-18",
-      avatar: "AJ",
-    },
-    {
-      id: 2,
-      borrower: "Bob Smith",
-      book: "Design Patterns",
-      type: "return",
-      date: "2026-02-18",
-      avatar: "BS",
-    },
-    {
-      id: 3,
-      borrower: "Carol Davis",
-      book: "The Pragmatic Programmer",
-      type: "checkout",
-      date: "2026-02-17",
-      avatar: "CD",
-    },
-    {
-      id: 4,
-      borrower: "Dan Wilson",
-      book: "Refactoring",
-      type: "return",
-      date: "2026-02-17",
-      avatar: "DW",
-    },
-    {
-      id: 5,
-      borrower: "Eve Martinez",
-      book: "Introduction to Algorithms",
-      type: "checkout",
-      date: "2026-02-17",
-      avatar: "EM",
-    },
-    {
-      id: 6,
-      borrower: "Frank Lee",
-      book: "Structure and Interpretation",
-      type: "return",
-      date: "2026-02-16",
-      avatar: "FL",
-    },
-    {
-      id: 7,
-      borrower: "Grace Kim",
-      book: "Artificial Intelligence",
-      type: "checkout",
-      date: "2026-02-16",
-      avatar: "GK",
-    },
-  ];
-}
-
-async function fakeFetchPopularBooks() {
-  await delay(700);
-  return [
-    {
-      id: 1,
-      title: "Clean Code",
-      author: "Robert C. Martin",
-      borrows: 47,
-      rating: 4.8,
-      cover: "📘",
-    },
-    {
-      id: 2,
-      title: "Design Patterns",
-      author: "Gang of Four",
-      borrows: 39,
-      rating: 4.6,
-      cover: "📗",
-    },
-    {
-      id: 3,
-      title: "The Pragmatic Programmer",
-      author: "Hunt & Thomas",
-      borrows: 35,
-      rating: 4.9,
-      cover: "📕",
-    },
-    {
-      id: 4,
-      title: "Introduction to Algorithms",
-      author: "Cormen et al.",
-      borrows: 31,
-      rating: 4.5,
-      cover: "📙",
-    },
-    {
-      id: 5,
-      title: "Refactoring",
-      author: "Martin Fowler",
-      borrows: 28,
-      rating: 4.7,
-      cover: "📓",
-    },
-  ];
-}
-
-async function fakeFetchOverdueItems() {
-  await delay(750);
-  return [
-    {
-      id: 1,
-      borrower: "Hank Brown",
-      book: "Data Structures",
-      dueDate: "2026-02-10",
-      daysOverdue: 8,
-      email: "hank@school.edu",
-    },
-    {
-      id: 2,
-      borrower: "Ivy Chen",
-      book: "Operating Systems",
-      dueDate: "2026-02-12",
-      daysOverdue: 6,
-      email: "ivy@school.edu",
-    },
-    {
-      id: 3,
-      borrower: "Jake Torres",
-      book: "Computer Networks",
-      dueDate: "2026-02-14",
-      daysOverdue: 4,
-      email: "jake@school.edu",
-    },
-    {
-      id: 4,
-      borrower: "Karen White",
-      book: "Database Systems",
-      dueDate: "2026-02-15",
-      daysOverdue: 3,
-      email: "karen@school.edu",
-    },
-  ];
-}
-
-async function fakeFetchCategoryBreakdown() {
-  await delay(500);
-  return [
-    { name: "Computer Science", count: 642, percent: 78 },
-    { name: "Mathematics", count: 389, percent: 65 },
-    { name: "Engineering", count: 312, percent: 54 },
-    { name: "Science Fiction", count: 287, percent: 48 },
-    { name: "Literature", count: 245, percent: 42 },
-    { name: "History", count: 198, percent: 35 },
-  ];
-}
+import api from "@/services/api";
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 
@@ -276,18 +100,19 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [s, t, p, o, c] = await Promise.all([
-          fakeFetchStats(),
-          fakeFetchRecentTransactions(),
-          fakeFetchPopularBooks(),
-          fakeFetchOverdueItems(),
-          fakeFetchCategoryBreakdown(),
-        ]);
-        setStats(s);
-        setTransactions(t);
-        setPopularBooks(p);
-        setOverdueItems(o);
-        setCategories(c);
+        const res = await api.get("/dashboard/stats");
+        const d = res.data.data;
+        setStats({
+          ...d.stats,
+          booksTrend: 0,
+          membersTrend: 0,
+          loansTrend: 0,
+          overdueTrend: 0,
+        });
+        setTransactions(d.recentTransactions);
+        setPopularBooks(d.popularBooks);
+        setOverdueItems(d.overdueItems);
+        setCategories(d.categoryBreakdown);
       } finally {
         setLoading(false);
       }
@@ -476,17 +301,13 @@ export default function Dashboard() {
             {popularBooks.map((book, i) => (
               <div key={book.id} className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-lg">
-                  {book.cover}
+                  📚
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium truncate pr-2">
                       {book.title}
                     </p>
-                    <div className="flex items-center gap-1 text-xs text-amber-500 shrink-0">
-                      <Star className="h-3 w-3 fill-amber-500" />
-                      {book.rating}
-                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
                     <p className="text-xs text-muted-foreground truncate pr-2">
