@@ -96,6 +96,7 @@ export default function Dashboard() {
   const [overdueItems, setOverdueItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -113,6 +114,12 @@ export default function Dashboard() {
         setPopularBooks(d.popularBooks);
         setOverdueItems(d.overdueItems);
         setCategories(d.categoryBreakdown);
+      } catch (err) {
+        setError(
+          err.response?.data?.message ??
+            err.message ??
+            "Failed to load dashboard",
+        );
       } finally {
         setLoading(false);
       }
@@ -121,6 +128,13 @@ export default function Dashboard() {
   }, []);
 
   if (loading) return <DashboardSkeleton />;
+
+  if (error || !stats)
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <p className="text-destructive">{error ?? "No data available."}</p>
+      </div>
+    );
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
