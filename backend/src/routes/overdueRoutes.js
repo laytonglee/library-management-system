@@ -4,6 +4,7 @@ const {
   listOverdue,
   overdueSummary,
   runOverdueCheck,
+  overdueDistribution,
 } = require("../controllers/overdueController");
 const {
   authenticateToken,
@@ -24,6 +25,14 @@ router.get(
   authenticateToken,
   requirePermission("view_overdue"),
   overdueSummary,
+);
+
+// 2. GET /api/v1/overdue/distribution — raw data for Box Plots
+router.get(
+  "/distribution",
+  authenticateToken,
+  requirePermission("view_overdue"),
+  overdueDistribution,
 );
 
 // POST /api/v1/overdue/run-check — trigger overdue detection
