@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 
 const authRoutes = require("./routes/authRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+const bookRoutes = require("./routes/bookRoutes");
 
 const app = express();
 app.use(
@@ -19,6 +20,7 @@ app.use(cookieParser());
 // Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
+app.use("/api/v1/books", bookRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
