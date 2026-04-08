@@ -9,12 +9,10 @@ async function listOverdue(req, res) {
       pagination: result.pagination,
     });
   } catch (err) {
-    return res
-      .status(err.statusCode || 500)
-      .json({
-        success: false,
-        message: err.message || "Internal server error",
-      });
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Internal server error",
+    });
   }
 }
 
@@ -23,12 +21,10 @@ async function overdueSummary(req, res) {
     const data = await overdueService.getOverdueSummary();
     return res.json({ success: true, data });
   } catch (err) {
-    return res
-      .status(err.statusCode || 500)
-      .json({
-        success: false,
-        message: err.message || "Internal server error",
-      });
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Internal server error",
+    });
   }
 }
 
@@ -41,13 +37,32 @@ async function runOverdueCheck(req, res) {
       data: result,
     });
   } catch (err) {
-    return res
-      .status(err.statusCode || 500)
-      .json({
-        success: false,
-        message: err.message || "Internal server error",
-      });
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Internal server error",
+    });
   }
 }
 
-module.exports = { listOverdue, overdueSummary, runOverdueCheck };
+async function overdueDistribution(req, res) {
+  try {
+    // You'll create this function in the service next
+    const data = await overdueService.getOverdueDistribution();
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Internal server error",
+    });
+  }
+}
+
+module.exports = {
+  listOverdue,
+  overdueSummary,
+  runOverdueCheck,
+  overdueDistribution,
+};
