@@ -1,6 +1,7 @@
 // backend/src/services/overdueService.js
 const prisma = require("../config/prisma");
 const { TransactionStatus } = require("@prisma/client");
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 async function listOverdue({
   page = 1,
@@ -44,7 +45,7 @@ async function listOverdue({
   const now = new Date();
   const data = transactions.map((t) => ({
     ...t,
-    daysOverdue: Math.ceil((now - t.dueDate) / (1000 * 60 * 60 * 24)),
+    daysOverdue: Math.ceil((now - t.dueDate) / MS_PER_DAY),
   }));
 
   return {
@@ -70,7 +71,7 @@ async function getOverdueSummary() {
   let maxDaysOverdue = 0;
 
   for (const t of overdueTransactions) {
-    const days = Math.ceil((now - t.dueDate) / (1000 * 60 * 60 * 24));
+    const days = Math.ceil((now - t.dueDate) / MS_PER_DAY);
     totalDaysOverdue += days;
     if (days > maxDaysOverdue) maxDaysOverdue = days;
   }
@@ -83,44 +84,33 @@ async function getOverdueSummary() {
   };
 }
 
-async function runOverdueCheck() {
-  const now = new Date();
-
+async function detectAndFlagOverdue() {
   const overdueTransactions = await prisma.borrowingTransaction.findMany({
-    where: { status: TransactionStatus.ACTIVE, dueDate: { lt: now } },
+    where: {
+      status: TransactionStatus.ACTIVE,
+      dueDate: { lt: new Date() },
+    },
     include: {
       borrower: { select: { id: true, fullName: true } },
       bookCopy: { select: { book: { select: { title: true } } } },
     },
   });
 
-  for (const t of overdueTransactions) {
-    await prisma.borrowingTransaction.update({
-      where: { id: t.id },
-      data: { status: TransactionStatus.OVERDUE },
-    });
+  await Promise.all(
+    overdueTransactions.map((t) =>
+      prisma.borrowingTransaction.update({
+        where: { id: t.id },
+        data: { status: TransactionStatus.OVERDUE },
+      })
+    )
+  );
 
-    // TODO: enable when notifications are ready
-    // const existing = await prisma.notification.findFirst({
-    //   where: { transactionId: t.id, type: "OVERDUE_ALERT" },
-    // });
-    // if (!existing) {
-    //   const daysOverdue = Math.ceil((now - t.dueDate) / (1000 * 60 * 60 * 24));
-    //   await prisma.notification.create({
-    //     data: {
-    //       userId: t.borrowerId,
-    //       transactionId: t.id,
-    //       type: "OVERDUE_ALERT",
-    //       message: `"${t.bookCopy.book.title}" is ${daysOverdue} day(s) overdue. Please return it as soon as possible.`,
-    //     },
-    //   });
-    // }
-  }
+  return overdueTransactions.length;
+}
 
-  return {
-    overdueCount: overdueTransactions.length,
-    newNotifications: 0, // TODO: enable when notifications are ready
-  };
+async function runOverdueCheck() {
+  const overdueCount = await detectAndFlagOverdue();
+  return { overdueCount, newNotifications: 0 };
 }
 
 async function getOverdueDistribution() {
@@ -142,7 +132,7 @@ async function getOverdueDistribution() {
 
   const distribution = overdueItems.map((t) => ({
     title: t.bookCopy.book.title,
-    daysOverdue: Math.ceil((now - new Date(t.dueDate)) / (1000 * 60 * 60 * 24)),
+    daysOverdue: Math.ceil((now - new Date(t.dueDate)) / MS_PER_DAY),
   }));
 
   return distribution;
@@ -153,5 +143,6 @@ module.exports = {
   listOverdue,
   getOverdueSummary,
   runOverdueCheck,
+  detectAndFlagOverdue,
   getOverdueDistribution,
 };
