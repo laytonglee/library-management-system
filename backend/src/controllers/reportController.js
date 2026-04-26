@@ -110,7 +110,7 @@ async function exportReport(req, res) {
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=${config.filename}`,
+      `attachment; filename="${config.filename}"`,
     );
     return res.send(csv);
   } catch (err) {
