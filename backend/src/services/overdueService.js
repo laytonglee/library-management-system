@@ -1,6 +1,7 @@
 // backend/src/services/overdueService.js
 const prisma = require("../config/prisma");
 const { TransactionStatus } = require("@prisma/client");
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 async function listOverdue({
   page = 1,
@@ -44,7 +45,7 @@ async function listOverdue({
   const now = new Date();
   const data = transactions.map((t) => ({
     ...t,
-    daysOverdue: Math.ceil((now - t.dueDate) / (1000 * 60 * 60 * 24)),
+    daysOverdue: Math.ceil((now - t.dueDate) / MS_PER_DAY),
   }));
 
   return {
@@ -70,7 +71,7 @@ async function getOverdueSummary() {
   let maxDaysOverdue = 0;
 
   for (const t of overdueTransactions) {
-    const days = Math.ceil((now - t.dueDate) / (1000 * 60 * 60 * 24));
+    const days = Math.ceil((now - t.dueDate) / MS_PER_DAY);
     totalDaysOverdue += days;
     if (days > maxDaysOverdue) maxDaysOverdue = days;
   }
@@ -131,7 +132,7 @@ async function getOverdueDistribution() {
 
   const distribution = overdueItems.map((t) => ({
     title: t.bookCopy.book.title,
-    daysOverdue: Math.ceil((now - new Date(t.dueDate)) / (1000 * 60 * 60 * 24)),
+    daysOverdue: Math.ceil((now - new Date(t.dueDate)) / MS_PER_DAY),
   }));
 
   return distribution;
