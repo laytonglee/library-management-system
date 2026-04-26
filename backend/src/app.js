@@ -15,6 +15,7 @@ const policyRoutes = require("./routes/policyRoutes");
 const auditLogRoutes = require("./routes/auditLogRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reservationRoutes = require("./routes/reservationRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
 
@@ -72,6 +73,7 @@ app.use("/api/v1/borrowing-policies", policyRoutes);
 app.use("/api/v1/audit-logs", auditLogRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/reservations", reservationRoutes);
+app.use("/api/v1/reports", reportRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
