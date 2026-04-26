@@ -112,4 +112,36 @@ async function runOverdueCheck() {
   return { overdueCount, newNotifications: 0 };
 }
 
-module.exports = { listOverdue, getOverdueSummary, runOverdueCheck, detectAndFlagOverdue };
+async function getOverdueDistribution() {
+  const now = new Date();
+  const overdueItems = await prisma.borrowingTransaction.findMany({
+    where: {
+      status: TransactionStatus.ACTIVE,
+      dueDate: { lt: now },
+    },
+    select: {
+      dueDate: true,
+      bookCopy: {
+        select: {
+          book: { select: { title: true } },
+        },
+      },
+    },
+  });
+
+  const distribution = overdueItems.map((t) => ({
+    title: t.bookCopy.book.title,
+    daysOverdue: Math.ceil((now - new Date(t.dueDate)) / (1000 * 60 * 60 * 24)),
+  }));
+
+  return distribution;
+  // Returns: [{ title: "Sapiens", daysOverdue: 5 }, { title: "1984", daysOverdue: 45 }]
+}
+
+module.exports = {
+  listOverdue,
+  getOverdueSummary,
+  runOverdueCheck,
+  detectAndFlagOverdue,
+  getOverdueDistribution,
+};
