@@ -84,14 +84,27 @@ async function getOverdueSummary() {
 }
 
 async function detectAndFlagOverdue() {
-  const result = await prisma.borrowingTransaction.updateMany({
+  const overdueTransactions = await prisma.borrowingTransaction.findMany({
     where: {
       status: TransactionStatus.ACTIVE,
       dueDate: { lt: new Date() },
     },
-    data: { status: TransactionStatus.OVERDUE },
+    include: {
+      borrower: { select: { id: true, fullName: true } },
+      bookCopy: { select: { book: { select: { title: true } } } },
+    },
   });
-  return result.count;
+
+  await Promise.all(
+    overdueTransactions.map((t) =>
+      prisma.borrowingTransaction.update({
+        where: { id: t.id },
+        data: { status: TransactionStatus.OVERDUE },
+      })
+    )
+  );
+
+  return overdueTransactions.length;
 }
 
 async function runOverdueCheck() {
