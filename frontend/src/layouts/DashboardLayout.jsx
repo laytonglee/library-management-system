@@ -145,8 +145,8 @@ export default function DashboardLayout() {
     async function fetchNotifs() {
       try {
         const { data } = await getNotifications({ limit: 10 });
-        setNotifications(data.data);
-        setUnreadCount(data.unreadCount);
+        setNotifications(Array.isArray(data?.data) ? data.data : []);
+        setUnreadCount(Number.isFinite(data?.unreadCount) ? data.unreadCount : 0);
       } catch {
         // silently ignore polling errors
       }

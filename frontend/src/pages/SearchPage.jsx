@@ -235,7 +235,7 @@ export default function SearchPage() {
           )}
         </CardHeader>
         <CardContent className="p-0">
-          <div className="rounded-md border-t">
+          <div className="rounded-md border-t overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
