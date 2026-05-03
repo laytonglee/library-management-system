@@ -3,11 +3,11 @@ import api from "./api";
 // GET /reports/inventory
 export const getInventoryReport = () => api.get("/reports/inventory");
 
-// GET /reports/usage
-export const getUsageReport = () => api.get("/reports/usage");
+// GET /reports/borrowing
+export const getUsageReport = () => api.get("/reports/borrowing");
 
-// GET /reports/popular-books
-export const getPopularBooksReport = () => api.get("/reports/popular-books");
+// GET /reports/popular
+export const getPopularBooksReport = () => api.get("/reports/popular");
 
 // GET /reports/overdue-trends
 export const getOverdueTrendsReport = () => api.get("/reports/overdue-trends");
@@ -16,6 +16,6 @@ export const getOverdueTrendsReport = () => api.get("/reports/overdue-trends");
 // Even though the URL is different, it serves the report, so keep it here.
 export const getOverdueDistribution = () => api.get("/overdue/distribution");
 
-// GET /reports/export
-export const exportReport = (params) =>
-  api.get("/reports/export", { params, responseType: "blob" });
+// GET /reports/:type/export
+export const exportReport = (type, params) =>
+  api.get(`/reports/${type}/export`, { params, responseType: "blob" });

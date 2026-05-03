@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { AppSidebar } from "@/components/app-sidebar";
-// TODO: enable when notifications are ready
-// import {
-//   getNotifications,
-//   markAllAsRead,
-//   markAsRead,
-// } from "@/services/notificationService";
+import {
+  getNotifications,
+  markAllAsRead,
+  markAsRead,
+} from "@/services/notificationService";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -30,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Bell,
@@ -136,32 +136,47 @@ function applyTheme(theme) {
 
 export default function DashboardLayout() {
   const [activeTheme, setActiveTheme] = useState(THEMES[0]);
-  // TODO: enable when notifications are ready
-  // const [notifications, setNotifications] = useState([]);
-  // const [unreadCount, setUnreadCount] = useState(0);
-  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
 
-  // TODO: enable when notifications are ready
-  // useEffect(() => {
-  //   if (!user) return;
-  //   async function fetchNotifs() {
-  //     try {
-  //       const { data } = await getNotifications({ limit: 10 });
-  //       setNotifications(data.data);
-  //       setUnreadCount(data.unreadCount);
-  //     } catch {
-  //       // silently ignore polling errors
-  //     }
-  //   }
-  //   fetchNotifs();
-  //   const interval = setInterval(fetchNotifs, 10000);
-  //   return () => clearInterval(interval);
-  // }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    async function fetchNotifs() {
+      try {
+        const { data } = await getNotifications({ limit: 10 });
+        setNotifications(data.data);
+        setUnreadCount(data.unreadCount);
+      } catch {
+        // silently ignore polling errors
+      }
+    }
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
 
-  // TODO: enable when notifications are ready
-  // async function handleMarkAllRead() { ... }
-  // async function handleMarkOneRead(id) { ... }
+  async function handleMarkAllRead() {
+    try {
+      await markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function handleMarkOneRead(id) {
+    try {
+      await markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch {
+      // silently ignore
+    }
+  }
 
   const handleLogout = async () => {
     await logout();
@@ -244,14 +259,50 @@ export default function DashboardLayout() {
                   aria-label="Notifications"
                 >
                   <Bell className="size-4" />
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Badge>
+                  )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  Notifications coming soon
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <DropdownMenuLabel className="p-0">
+                    Notifications {unreadCount > 0 && `(${unreadCount} unread)`}
+                  </DropdownMenuLabel>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                  )}
                 </div>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    You&apos;re all caught up.
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <DropdownMenuItem
+                        key={n.id}
+                        onClick={() => !n.isRead && handleMarkOneRead(n.id)}
+                        className={`flex flex-col items-start gap-0.5 px-3 py-2 cursor-pointer ${
+                          !n.isRead ? "bg-accent/40" : ""
+                        }`}
+                      >
+                        <span className="text-sm leading-snug">{n.message}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {timeAgo(n.sentAt)}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

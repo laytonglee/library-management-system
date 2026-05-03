@@ -8,7 +8,7 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const bookRoutes = require("./routes/bookRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const overdueRoutes = require("./routes/overdueRoutes");
-// const notificationRoutes = require("./routes/notificationRoutes"); // TODO: enable when notifications are ready
+const notificationRoutes = require("./routes/notificationRoutes");
 const userRoutes = require("./routes/userRoutes");
 const roleRoutes = require("./routes/roleRoutes");
 const policyRoutes = require("./routes/policyRoutes");
@@ -66,7 +66,7 @@ app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/books", bookRoutes);
 app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/overdue", overdueRoutes);
-// app.use("/api/v1/notifications", notificationRoutes); // TODO: enable when notifications are ready
+app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/roles", roleRoutes);
 app.use("/api/v1/borrowing-policies", policyRoutes);

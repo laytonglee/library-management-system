@@ -158,8 +158,14 @@ describe("Service transaction and audit contracts", () => {
     );
   });
 
-  it("overdue check marks active past-due transactions as OVERDUE", async () => {
+  // TC-06-10: detectAndFlagOverdue uses $transaction, creates notification, writes OVERDUE_FLAG audit log
+  it("overdue check marks active past-due transactions as OVERDUE, creates OVERDUE_ALERT notification, and writes OVERDUE_FLAG audit log in one transaction", async () => {
     const dueDate = new Date("2026-03-20T00:00:00.000Z");
+    const tx = {
+      borrowingTransaction: { update: jest.fn().mockResolvedValue({}) },
+      notification: { create: jest.fn().mockResolvedValue({}) },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
+    };
     const mockPrisma = {
       borrowingTransaction: {
         findMany: jest.fn().mockResolvedValue([
@@ -171,24 +177,83 @@ describe("Service transaction and audit contracts", () => {
             bookCopy: { book: { title: "Overdue Book" } },
           },
         ]),
-        update: jest.fn().mockResolvedValue({}),
       },
+      $transaction: jest.fn(async (work) => work(tx)),
     };
+    const log = jest.fn().mockResolvedValue({});
 
     jest.doMock("../config/prisma", () => mockPrisma);
     jest.doMock("@prisma/client", () => ({
       TransactionStatus: { ACTIVE: "ACTIVE", OVERDUE: "OVERDUE" },
+      NotificationType: { OVERDUE_ALERT: "OVERDUE_ALERT" },
     }));
+    jest.doMock("../services/auditLogger", () => ({ log }));
 
     const { runOverdueCheck } = require("../services/overdueService");
 
     const result = await runOverdueCheck();
 
     expect(result.overdueCount).toBe(1);
-    expect(mockPrisma.borrowingTransaction.update).toHaveBeenCalledWith(
+    expect(result.newNotifications).toBe(1);
+
+    // Status updated inside $transaction
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(tx.borrowingTransaction.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 99 },
         data: { status: "OVERDUE" },
+      }),
+    );
+
+    // OVERDUE_ALERT notification created for the borrower (TC-06-03)
+    expect(tx.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 4,
+          transactionId: 99,
+          type: "OVERDUE_ALERT",
+        }),
+      }),
+    );
+
+    // OVERDUE_FLAG audit log written in same $transaction (TC-06-10)
+    expect(log).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        actorId: null,
+        action: "OVERDUE_FLAG",
+        targetType: "transaction",
+        targetId: 99,
+      }),
+    );
+  });
+
+  it("detectAndFlagOverdue does not re-flag already-OVERDUE transactions (duplicate prevention)", async () => {
+    const mockPrisma = {
+      borrowingTransaction: {
+        // Returns empty — all past-due transactions are now OVERDUE, not ACTIVE
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      $transaction: jest.fn(),
+    };
+
+    jest.doMock("../config/prisma", () => mockPrisma);
+    jest.doMock("@prisma/client", () => ({
+      TransactionStatus: { ACTIVE: "ACTIVE", OVERDUE: "OVERDUE" },
+      NotificationType: { OVERDUE_ALERT: "OVERDUE_ALERT" },
+    }));
+    jest.doMock("../services/auditLogger", () => ({ log: jest.fn() }));
+
+    const { runOverdueCheck } = require("../services/overdueService");
+
+    const result = await runOverdueCheck();
+
+    expect(result.overdueCount).toBe(0);
+    expect(result.newNotifications).toBe(0);
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    expect(mockPrisma.borrowingTransaction.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "ACTIVE" }),
       }),
     );
   });
