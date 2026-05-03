@@ -185,6 +185,8 @@ model Notification {
   user        User                  @relation(fields: [userId], references: [id])
   transaction BorrowingTransaction? @relation(fields: [transactionId], references: [id])
 
+  @@index([userId, sentAt(sort: Desc)])
+  @@index([userId, isRead])
   @@map("notifications")
 }
 

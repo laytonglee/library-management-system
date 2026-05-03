@@ -1,6 +1,7 @@
 // backend/src/services/overdueService.js
 const prisma = require("../config/prisma");
-const { TransactionStatus } = require("@prisma/client");
+const { TransactionStatus, NotificationType } = require("@prisma/client");
+const auditLogger = require("./auditLogger");
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 async function listOverdue({
@@ -84,6 +85,8 @@ async function getOverdueSummary() {
   };
 }
 
+// REQ-11, REQ-12 / UC-06 — TC-06-10
+// Status update + notification create + audit log are atomic per transaction.
 async function detectAndFlagOverdue() {
   const overdueTransactions = await prisma.borrowingTransaction.findMany({
     where: {
@@ -96,21 +99,44 @@ async function detectAndFlagOverdue() {
     },
   });
 
-  await Promise.all(
-    overdueTransactions.map((t) =>
-      prisma.borrowingTransaction.update({
+  let flagged = 0;
+  for (const t of overdueTransactions) {
+    const title = t.bookCopy.book.title;
+    const dueDateStr = t.dueDate.toISOString().split("T")[0];
+
+    await prisma.$transaction(async (tx) => {
+      await tx.borrowingTransaction.update({
         where: { id: t.id },
         data: { status: TransactionStatus.OVERDUE },
-      })
-    )
-  );
+      });
 
-  return overdueTransactions.length;
+      await tx.notification.create({
+        data: {
+          userId: t.borrowerId,
+          transactionId: t.id,
+          type: NotificationType.OVERDUE_ALERT,
+          message: `"${title}" is overdue (due ${dueDateStr})`,
+        },
+      });
+
+      await auditLogger.log(tx, {
+        actorId: null,
+        action: "OVERDUE_FLAG",
+        targetType: "transaction",
+        targetId: t.id,
+        details: { dueDate: t.dueDate, borrowerId: t.borrowerId },
+      });
+    });
+
+    flagged += 1;
+  }
+
+  return flagged;
 }
 
 async function runOverdueCheck() {
   const overdueCount = await detectAndFlagOverdue();
-  return { overdueCount, newNotifications: 0 };
+  return { overdueCount, newNotifications: overdueCount };
 }
 
 async function getOverdueDistribution() {
