@@ -3,9 +3,12 @@ const overdueService = require("../services/overdueService");
 let handle = null;
 
 async function runOnce() {
-  const count = await overdueService.detectAndFlagOverdue();
-  console.log(`[overdueJob] flagged ${count} overdue transaction(s)`);
-  return count;
+  const [flagged, reminded] = await Promise.all([
+    overdueService.detectAndFlagOverdue(),
+    overdueService.sendDueReminders(),
+  ]);
+  console.log(`[overdueJob] flagged ${flagged} overdue, sent ${reminded} due reminder(s)`);
+  return { flagged, reminded };
 }
 
 function startOverdueJob(intervalMs) {

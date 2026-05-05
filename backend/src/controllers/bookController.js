@@ -87,7 +87,10 @@ async function update(req, res) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid book ID" });
-    const book = await updateBook(id, req.body);
+    const book = await updateBook(id, req.body, {
+      actorId: req.user.userId,
+      ipAddress: req.ip,
+    });
     return res.json({ success: true, data: book });
   } catch (err) {
     return res
@@ -109,7 +112,7 @@ async function remove(req, res) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid book ID" });
-    await deleteBook(id);
+    await deleteBook(id, { actorId: req.user.userId, ipAddress: req.ip });
     return res.json({ success: true, message: "Book deleted" });
   } catch (err) {
     return res

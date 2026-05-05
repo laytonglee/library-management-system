@@ -6,6 +6,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   XAxis,
   YAxis,
@@ -19,6 +20,7 @@ import {
   Bar,
   Cell,
 } from "recharts";
+<<<<<<< Updated upstream
 import { Loader2, FileText, Download } from "lucide-react";
 import {
   getInventoryReport,
@@ -26,6 +28,12 @@ import {
   getPopularBooksReport,
   getOverdueTrendsReport,
 } from "@/services/reportService";
+=======
+import { Loader2, Download } from "lucide-react";
+import { getTransactions } from "@/services/transactionService";
+import { getCategories } from "@/services/bookService";
+import { getOverdueDistribution, exportReport } from "@/services/reportService";
+>>>>>>> Stashed changes
 
 const COLORS = [
   "#378ADD",
@@ -36,6 +44,7 @@ const COLORS = [
   "#D4537E",
 ];
 
+<<<<<<< Updated upstream
 const originalWarn = console.warn;
 console.warn = (...args) => {
   if (
@@ -48,6 +57,32 @@ console.warn = (...args) => {
   }
   originalWarn(...args);
 };
+=======
+export default function ReportsPage() {
+  const [rawData, setRawData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [distData, setDistData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(null);
+
+  async function handleExport(type) {
+    setExporting(type);
+    try {
+      const res = await exportReport(type);
+      const url = URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${type}-report.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently ignore export errors
+    } finally {
+      setExporting(null);
+    }
+  }
+>>>>>>> Stashed changes
 
 // ── Shared components ──────────────────────────────────────────────────────
 
@@ -126,6 +161,7 @@ function InventorySection({ data, loading }) {
   const chartData = statusEntries.map(([k, v]) => ({ name: k, value: v }));
 
   return (
+<<<<<<< Updated upstream
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard
@@ -144,6 +180,42 @@ function InventorySection({ data, loading }) {
             danger={k.toLowerCase().includes("overdue")}
           />
         ))}
+=======
+    <div className="flex flex-1 flex-col gap-6 p-6 bg-background">
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Library Analytics
+          </h1>
+          <p className="text-muted-foreground">
+            Real-time health of your inventory and loans.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {loading && <Loader2 className="animate-spin text-primary" />}
+          {[
+            { type: "inventory", label: "Inventory" },
+            { type: "borrowing", label: "Borrowing" },
+            { type: "popular", label: "Popular Books" },
+            { type: "overdue-trends", label: "Overdue Trends" },
+          ].map(({ type, label }) => (
+            <Button
+              key={type}
+              variant="outline"
+              size="sm"
+              disabled={exporting === type}
+              onClick={() => handleExport(type)}
+            >
+              {exporting === type ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              {label}
+            </Button>
+          ))}
+        </div>
+>>>>>>> Stashed changes
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

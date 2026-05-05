@@ -39,7 +39,11 @@ async function getUser(req, res) {
 
 async function createUser(req, res) {
   try {
-    const user = await userService.createUser(req.body);
+    const user = await userService.createUser({
+      ...req.body,
+      actorId: req.user.userId,
+      ipAddress: req.ip,
+    });
     return res.status(201).json({ success: true, data: user });
   } catch (err) {
     return res
@@ -58,7 +62,11 @@ async function updateUser(req, res) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid user ID" });
-    const user = await userService.updateUser(id, req.body);
+    const user = await userService.updateUser(id, {
+      ...req.body,
+      actorId: req.user.userId,
+      ipAddress: req.ip,
+    });
     return res.json({ success: true, data: user });
   } catch (err) {
     return res
@@ -80,7 +88,10 @@ async function deactivateUser(req, res) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid user ID" });
-    const user = await userService.deactivateUser(id);
+    const user = await userService.deactivateUser(id, {
+      actorId: req.user.userId,
+      ipAddress: req.ip,
+    });
     return res.json({ success: true, data: user, message: "User deactivated" });
   } catch (err) {
     return res
@@ -99,7 +110,10 @@ async function deleteUser(req, res) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid user ID" });
-    await userService.deleteUser(id);
+    await userService.deleteUser(id, {
+      actorId: req.user.userId,
+      ipAddress: req.ip,
+    });
     return res.json({ success: true, message: "User deleted" });
   } catch (err) {
     return res

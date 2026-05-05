@@ -109,6 +109,7 @@ async function login(req, res) {
     const { accessToken, refreshToken, user } = await loginUser(
       email,
       password,
+      req.ip,
     );
 
     res.cookie(

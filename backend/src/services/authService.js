@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
+const auditLogger = require("./auditLogger");
 
 /**
  * Register a new user
@@ -73,9 +74,10 @@ async function registerUser({
  * Login a user
  * @param {string} email
  * @param {string} password
+ * @param {string} [ipAddress]
  * @returns {{ token: string, user: Object }}
  */
-async function loginUser(email, password) {
+async function loginUser(email, password, ipAddress) {
   // 1. Find user by email
   const user = await prisma.user.findUnique({
     where: { email },
@@ -129,7 +131,19 @@ async function loginUser(email, password) {
     },
   );
 
-  // 5. Return token + safe user object
+  // 5. Write login audit log (best-effort — never fails the login response)
+  prisma.$transaction((tx) =>
+    auditLogger.log(tx, {
+      actorId: user.id,
+      action: "LOGIN",
+      targetType: "user",
+      targetId: user.id,
+      details: { email: user.email, role: user.role.name },
+      ipAddress: ipAddress ?? null,
+    }),
+  ).catch(() => {});
+
+  // 6. Return token + safe user object
   const { passwordHash, ...safeUser } = user;
   return { accessToken, refreshToken, user: safeUser };
 }

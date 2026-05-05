@@ -163,10 +163,57 @@ async function getOverdueDistribution() {
   // Returns: [{ title: "Sapiens", daysOverdue: 5 }, { title: "1984", daysOverdue: 45 }]
 }
 
+// REQ-12 — Send DUE_REMINDER for active loans due within the next 3 days.
+// Skips transactions that already have an unread reminder to avoid duplicates.
+const DUE_REMINDER_DAYS = 3;
+
+async function sendDueReminders() {
+  const now = new Date();
+  const soon = new Date(now.getTime() + DUE_REMINDER_DAYS * MS_PER_DAY);
+
+  const upcomingTransactions = await prisma.borrowingTransaction.findMany({
+    where: {
+      status: TransactionStatus.ACTIVE,
+      dueDate: { gte: now, lte: soon },
+    },
+    include: {
+      borrower: { select: { id: true } },
+      bookCopy: { select: { book: { select: { title: true } } } },
+      notifications: {
+        where: { type: NotificationType.DUE_REMINDER, isRead: false },
+        select: { id: true },
+      },
+    },
+  });
+
+  let sent = 0;
+  for (const t of upcomingTransactions) {
+    if (t.notifications.length > 0) continue;
+
+    const dueDateStr = t.dueDate.toISOString().split("T")[0];
+    const daysLeft = Math.ceil((t.dueDate - now) / MS_PER_DAY);
+    const title = t.bookCopy.book.title;
+
+    await prisma.notification.create({
+      data: {
+        userId: t.borrowerId,
+        transactionId: t.id,
+        type: NotificationType.DUE_REMINDER,
+        message: `Reminder: "${title}" is due in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} (${dueDateStr}).`,
+      },
+    });
+
+    sent += 1;
+  }
+
+  return sent;
+}
+
 module.exports = {
   listOverdue,
   getOverdueSummary,
   runOverdueCheck,
   detectAndFlagOverdue,
   getOverdueDistribution,
+  sendDueReminders,
 };

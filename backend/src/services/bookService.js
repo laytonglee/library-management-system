@@ -265,41 +265,77 @@ async function getBook(bookId) {
 
 // ─── Update Book ─────────────────────────────────────────────────────────────
 
-async function updateBook(bookId, data) {
-  const book = await prisma.book.update({
-    where: { id: bookId },
-    data: {
-      title: data.title,
-      author: data.author,
-      isbn: data.isbn,
-      categoryId: data.categoryId,
-      publisher: data.publisher,
-      publicationYear: data.publicationYear,
-      description: data.description,
-      coverImageUrl: data.coverImageUrl,
-    },
-    include: { category: true },
+async function updateBook(bookId, data, { actorId, ipAddress } = {}) {
+  return withSerializableTransaction(async (tx) => {
+    const before = await tx.book.findUnique({
+      where: { id: bookId },
+      select: { title: true, author: true, isbn: true, categoryId: true },
+    });
+
+    if (!before) throw createError("Book not found", 404);
+
+    const book = await tx.book.update({
+      where: { id: bookId },
+      data: {
+        title: data.title,
+        author: data.author,
+        isbn: data.isbn,
+        categoryId: data.categoryId,
+        publisher: data.publisher,
+        publicationYear: data.publicationYear,
+        description: data.description,
+        coverImageUrl: data.coverImageUrl,
+      },
+      include: { category: true },
+    });
+
+    await auditLogger.log(tx, {
+      actorId: actorId ?? null,
+      action: "EDIT_BOOK",
+      targetType: "book",
+      targetId: bookId,
+      details: { before, after: { title: data.title, author: data.author, isbn: data.isbn ?? null } },
+      ipAddress: ipAddress ?? null,
+    });
+
+    const counts = await getBookCounts(bookId, tx);
+    return { ...book, ...counts };
   });
-  const counts = await getBookCounts(bookId);
-  return { ...book, ...counts };
 }
 
 // ─── Delete Book ─────────────────────────────────────────────────────────────
 
-async function deleteBook(bookId) {
-  const activeCount = await prisma.borrowingTransaction.count({
-    where: { bookCopy: { bookId }, status: "ACTIVE" },
+async function deleteBook(bookId, { actorId, ipAddress } = {}) {
+  return withSerializableTransaction(async (tx) => {
+    const activeCount = await tx.borrowingTransaction.count({
+      where: { bookCopy: { bookId }, status: "ACTIVE" },
+    });
+    if (activeCount > 0) {
+      throw createError(
+        "Cannot delete book with active borrowing transactions",
+        409,
+      );
+    }
+
+    const book = await tx.book.findUnique({
+      where: { id: bookId },
+      select: { id: true, title: true, author: true, isbn: true },
+    });
+    if (!book) throw createError("Book not found", 404);
+
+    await tx.bookCopy.deleteMany({ where: { bookId } });
+
+    await auditLogger.log(tx, {
+      actorId: actorId ?? null,
+      action: "DELETE_BOOK",
+      targetType: "book",
+      targetId: bookId,
+      details: { title: book.title, author: book.author, isbn: book.isbn ?? null },
+      ipAddress: ipAddress ?? null,
+    });
+
+    await tx.book.delete({ where: { id: bookId } });
   });
-  if (activeCount > 0) {
-    throw createError(
-      "Cannot delete book with active borrowing transactions",
-      409,
-    );
-  }
-  await prisma.$transaction([
-    prisma.bookCopy.deleteMany({ where: { bookId } }),
-    prisma.book.delete({ where: { id: bookId } }),
-  ]);
 }
 
 // ─── List Copies ─────────────────────────────────────────────────────────────
