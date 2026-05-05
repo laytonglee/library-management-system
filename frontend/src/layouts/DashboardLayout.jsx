@@ -146,7 +146,9 @@ export default function DashboardLayout() {
       try {
         const { data } = await getNotifications({ limit: 10 });
         setNotifications(Array.isArray(data?.data) ? data.data : []);
-        setUnreadCount(Number.isFinite(data?.unreadCount) ? data.unreadCount : 0);
+        setUnreadCount(
+          Number.isFinite(data?.unreadCount) ? data.unreadCount : 0,
+        );
       } catch {
         // silently ignore polling errors
       }
@@ -170,7 +172,7 @@ export default function DashboardLayout() {
     try {
       await markAsRead(id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch {
@@ -190,7 +192,8 @@ export default function DashboardLayout() {
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset>
+      {/* <SidebarInset> */}
+      <SidebarInset className="min-w-0 overflow-x-hidden">
         {/* ── Header ── */}
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2">
@@ -295,7 +298,9 @@ export default function DashboardLayout() {
                           !n.isRead ? "bg-accent/40" : ""
                         }`}
                       >
-                        <span className="text-sm leading-snug">{n.message}</span>
+                        <span className="text-sm leading-snug">
+                          {n.message}
+                        </span>
                         <span className="text-xs text-muted-foreground">
                           {timeAgo(n.sentAt)}
                         </span>
