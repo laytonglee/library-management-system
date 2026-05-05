@@ -73,7 +73,6 @@ model Book {
 
   category  Category?  @relation(fields: [categoryId], references: [id])
   copies    BookCopy[]
-  auditLogs AuditLog[]
   reservations Reservation[]
 
   @@map("books")
@@ -186,6 +185,8 @@ model Notification {
   user        User                  @relation(fields: [userId], references: [id])
   transaction BorrowingTransaction? @relation(fields: [transactionId], references: [id])
 
+  @@index([userId, sentAt(sort: Desc)])
+  @@index([userId, isRead])
   @@map("notifications")
 }
 
@@ -207,7 +208,6 @@ model AuditLog {
   createdAt  DateTime @default(now()) @map("created_at")
 
   actor User? @relation(fields: [actorId], references: [id])
-  book  Book? @relation(fields: [targetId], references: [id])
 
   @@map("audit_logs")
 }

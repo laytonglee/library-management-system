@@ -1,7 +1,8 @@
 import api from "./api";
 
 // GET /notifications — current user's notifications
-export const getNotifications = () => api.get("/notifications");
+export const getNotifications = (params) =>
+  api.get("/notifications", { params });
 
 // PUT /notifications/:id/read — mark one as read
 export const markAsRead = (id) => api.put(`/notifications/${id}/read`);

@@ -129,6 +129,13 @@ export function SignupForm({ className, ...props }) {
             required
           />
         </Field>
+        {errorMessage && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Registration failed</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
         <Field>
           <FieldLabel htmlFor="role">Role</FieldLabel>
           <Select value={role} onValueChange={setRole} required>

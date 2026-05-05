@@ -58,6 +58,16 @@ export function AuthProvider({ children }) {
     navigate("/login");
   }, [navigate]);
 
+  // Listen for forced logout when refresh token expires
+  useEffect(() => {
+    function handleForceLogout() {
+      setUser(null);
+      navigate("/login");
+    }
+    window.addEventListener("auth:logout", handleForceLogout);
+    return () => window.removeEventListener("auth:logout", handleForceLogout);
+  }, [navigate]);
+
   // Derive the role string once (e.g. "student", "admin")
   const role = user?.role?.name ?? null;
 

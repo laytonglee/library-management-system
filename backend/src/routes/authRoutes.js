@@ -5,6 +5,7 @@ const {
   login,
   logout,
   getMe,
+  refresh,
 } = require("../controllers/authController");
 const {
   authenticateToken,
@@ -16,6 +17,8 @@ const {
 router.post("/register", register);
 // POST /api/v1/auth/login
 router.post("/login", login);
+// POST /api/v1/auth/refresh
+router.post("/refresh", refresh);
 
 // ── Authenticated routes ─────────────────────────────────────────────────────
 // POST /api/v1/auth/logout
