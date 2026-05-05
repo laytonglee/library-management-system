@@ -14,6 +14,7 @@ import {
   BarChart3,
   ScrollText,
   Settings2,
+  Database,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -141,6 +142,12 @@ const allNavItems = [
         url: "/settings",
         icon: Settings2,
         permission: PERMISSIONS.MANAGE_SETTINGS,
+      },
+      {
+        title: "Data Management",
+        url: "/data-management",
+        icon: Database,
+        permission: PERMISSIONS.MANAGE_DATA,
       },
     ],
   },

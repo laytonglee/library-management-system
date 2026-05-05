@@ -8,6 +8,8 @@ import DashboardLayout from "./layouts/DashboardLayout";
 // Public pages
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 // Authenticated pages
 import Dashboard from "./pages/Dashboard";
@@ -22,6 +24,7 @@ import UsersPage from "./pages/UsersPage";
 import ReportsPage from "./pages/ReportsPage";
 import AuditLogsPage from "./pages/AuditLogsPage";
 import SettingsPage from "./pages/SettingsPage";
+import DataManagementPage from "./pages/DataManagementPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 
 function ProtectedRoute({ children }) {
@@ -96,6 +99,8 @@ function App() {
           </PublicRoute>
         }
       />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* ── Authenticated routes (inside sidebar layout) ── */}
       <Route
@@ -179,6 +184,14 @@ function App() {
           element={
             <RoleRoute permission={PERMISSIONS.MANAGE_SETTINGS}>
               <SettingsPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/data-management"
+          element={
+            <RoleRoute permission={PERMISSIONS.MANAGE_DATA}>
+              <DataManagementPage />
             </RoleRoute>
           }
         />

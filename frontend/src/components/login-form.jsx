@@ -1,6 +1,6 @@
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -16,11 +16,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function LoginForm({ className, ...props }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const wasReset = searchParams.get("reset") === "1";
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -76,12 +78,12 @@ export function LoginForm({ className, ...props }) {
         <Field>
           <div className="flex items-center">
             <FieldLabel htmlFor="password">Password</FieldLabel>
-            <a
-              href="#"
+            <Link
+              to="/forgot-password"
               className="ml-auto text-sm underline-offset-4 hover:underline"
             >
               Forgot your password?
-            </a>
+            </Link>
           </div>
           <Input
             id="password"
@@ -91,6 +93,13 @@ export function LoginForm({ className, ...props }) {
             required
           />
         </Field>
+        {wasReset && (
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Password reset</AlertTitle>
+            <AlertDescription>Your password has been reset. Please log in.</AlertDescription>
+          </Alert>
+        )}
         {errorMessage && (
           <Alert variant="destructive">
             <AlertCircle />

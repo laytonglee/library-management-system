@@ -2,6 +2,8 @@ const {
   registerUser,
   loginUser,
   getUserById,
+  forgotPassword,
+  resetPassword,
 } = require("../services/authService");
 const jwt = require("jsonwebtoken");
 
@@ -106,9 +108,11 @@ async function login(req, res) {
   }
 
   try {
+    const ipAddress = req.ip || req.connection?.remoteAddress || null;
     const { accessToken, refreshToken, user } = await loginUser(
       email,
       password,
+      ipAddress,
     );
 
     res.cookie(
@@ -233,4 +237,29 @@ async function refresh(req, res) {
   }
 }
 
-module.exports = { register, login, logout, getMe, refresh };
+async function forgotPasswordHandler(req, res) {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+
+  try {
+    await forgotPassword(email);
+    return res.json({ success: true, message: "If that email is registered, a reset link has been sent." });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+}
+
+async function resetPasswordHandler(req, res) {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ success: false, message: "Token and password are required" });
+  if (password.length < 8) return res.status(400).json({ success: false, message: "Password must be at least 8 characters" });
+
+  try {
+    await resetPassword(token, password);
+    return res.json({ success: true, message: "Password reset successfully. You can now log in." });
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+}
+
+module.exports = { register, login, logout, getMe, refresh, forgotPasswordHandler, resetPasswordHandler };

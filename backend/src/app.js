@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
 
 const authRoutes = require("./routes/authRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
@@ -16,27 +17,39 @@ const auditLogRoutes = require("./routes/auditLogRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reservationRoutes = require("./routes/reservationRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const dataManagementRoutes = require("./routes/dataManagementRoutes");
 
 const app = express();
 
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many requests, please try again later." },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // stricter limit for auth endpoints
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many login attempts, please try again later." },
+});
+
+app.use(globalLimiter);
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
 function isAllowedOrigin(origin) {
   if (!origin) return true;
 
   const configuredOrigins = new Set(
-    [
-      process.env.FRONTEND_URL,
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-    ].filter(Boolean),
+    [process.env.FRONTEND_URL, "http://localhost:5173", "http://127.0.0.1:5173"].filter(Boolean),
   );
 
-  if (configuredOrigins.has(origin)) {
-    return true;
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    return false;
-  }
+  if (configuredOrigins.has(origin)) return true;
+  if (process.env.NODE_ENV === "production") return false;
 
   try {
     const url = new URL(origin);
@@ -49,19 +62,17 @@ function isAllowedOrigin(origin) {
 app.use(
   cors({
     origin(origin, callback) {
-      if (isAllowedOrigin(origin)) {
-        return callback(null, true);
-      }
+      if (isAllowedOrigin(origin)) return callback(null, true);
       return callback(new Error(`Origin ${origin} is not allowed by CORS`));
     },
     credentials: true,
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
-// Routes
-app.use("/api/v1/auth", authRoutes);
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use("/api/v1/auth", authLimiter, authRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/books", bookRoutes);
 app.use("/api/v1/categories", categoryRoutes);
@@ -74,8 +85,9 @@ app.use("/api/v1/audit-logs", auditLogRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/reservations", reservationRoutes);
 app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/data-management", dataManagementRoutes);
 
-// Health check
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Library Management API is running" });
 });

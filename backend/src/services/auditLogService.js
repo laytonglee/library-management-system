@@ -1,10 +1,11 @@
-// backend/src/services/auditLogService.js
 const prisma = require("../config/prisma");
 
 async function listAuditLogs({
   action,
   actorId,
   targetType,
+  fromDate,
+  toDate,
   page = 1,
   limit = 50,
 } = {}) {
@@ -16,6 +17,16 @@ async function listAuditLogs({
   if (action) where.action = action;
   if (actorId) where.actorId = parseInt(actorId, 10);
   if (targetType) where.targetType = targetType;
+
+  if (fromDate || toDate) {
+    where.createdAt = {};
+    if (fromDate) where.createdAt.gte = new Date(fromDate);
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      where.createdAt.lte = to;
+    }
+  }
 
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({

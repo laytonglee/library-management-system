@@ -26,6 +26,9 @@ export const PERMISSIONS = {
 
   // Settings
   MANAGE_SETTINGS: "manage_settings",
+
+  // Data Management
+  MANAGE_DATA: "manage_data",
 };
 
 export const ROLE_PERMISSIONS = {
@@ -66,6 +69,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.VIEW_AUDIT_LOGS,
     PERMISSIONS.MANAGE_SETTINGS,
+    PERMISSIONS.MANAGE_DATA,
   ],
 };
 
@@ -84,6 +88,7 @@ export const ROUTE_PERMISSIONS = {
   "/reports": PERMISSIONS.VIEW_REPORTS,
   "/audit-logs": PERMISSIONS.VIEW_AUDIT_LOGS,
   "/settings": PERMISSIONS.MANAGE_SETTINGS,
+  "/data-management": PERMISSIONS.MANAGE_DATA,
 };
 
 export function hasPermission(role, permission) {

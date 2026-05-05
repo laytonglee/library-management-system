@@ -24,6 +24,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/
+
+# ── Local seed scripts ────────────────────────────────────────────────────────
+backend/prisma/seed-users.js
+
 # ── OS / Editor ───────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
