@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
 
 const authRoutes = require("./routes/authRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
@@ -16,6 +17,7 @@ const auditLogRoutes = require("./routes/auditLogRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reservationRoutes = require("./routes/reservationRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const importRoutes = require("./routes/importRoutes");
 
 const app = express();
 
@@ -60,6 +62,13 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200,
+  standardHeaders: true, legacyHeaders: false }));
+
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20,
+  message: { success: false, message: "Too many requests, please try again later." } });
+app.use("/api/v1/auth/login", authLimiter);
+
 // Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
@@ -74,6 +83,7 @@ app.use("/api/v1/audit-logs", auditLogRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/reservations", reservationRoutes);
 app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/import", importRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

@@ -22,6 +22,7 @@ A full-stack web application for managing a school library — supporting book c
   - [Getting Started](#frontend-getting-started)
   - [Pages & Routes](#pages--routes)
 - [Running the Full Stack](#running-the-full-stack)
+- [Data Backup & Recovery](#data-backup--recovery)
 - [Sprint Plan](#sprint-plan)
 
 ---
@@ -360,6 +361,59 @@ npm run dev
 | Backend  | http://localhost:3000            |
 | API      | http://localhost:3000/api        |
 | Health   | http://localhost:3000/api/health |
+
+---
+
+## Data Backup & Recovery
+
+The system uses `pg_dump` / `pg_restore` for full database backups (Report 3, Section V.4).
+
+### Create a backup
+
+```bash
+pg_dump \
+  --format=custom \
+  --file=library_backup_$(date +%Y%m%d_%H%M%S).dump \
+  "$DATABASE_URL"
+```
+
+`--format=custom` produces a compressed binary archive compatible with `pg_restore`.  
+`$DATABASE_URL` is the `postgresql://USER:PASSWORD@HOST:PORT/DB` string from `backend/.env`.
+
+### Restore from a backup
+
+```bash
+# Drop and recreate the database first (skip if the DB doesn't exist yet)
+psql "$DATABASE_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+# Restore all data
+pg_restore \
+  --no-owner \
+  --no-privileges \
+  --dbname="$DATABASE_URL" \
+  library_backup_YYYYMMDD_HHMMSS.dump
+```
+
+After restoring, regenerate the Prisma client and re-apply any schema migrations that post-date the backup:
+
+```bash
+cd backend
+npm run db:push
+```
+
+### Neon (cloud) databases
+
+If `DATABASE_URL` points to a Neon project, use the [Neon Console](https://console.neon.tech) **Branches** feature to create a point-in-time restore branch, or use `pg_dump` / `pg_restore` exactly as above — Neon accepts standard PostgreSQL connection strings.
+
+### Recommended schedule
+
+| Frequency   | Retention |
+| ----------- | --------- |
+| Daily       | 7 days    |
+| Weekly      | 4 weeks   |
+| Monthly     | 6 months  |
+
+Store dump files off-server (e.g., S3 bucket, team shared drive) to protect against host failure.
 
 ---
 
