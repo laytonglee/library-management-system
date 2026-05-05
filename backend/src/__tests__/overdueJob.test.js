@@ -1,5 +1,6 @@
 jest.mock("../services/overdueService", () => ({
   detectAndFlagOverdue: jest.fn(),
+  sendDueReminders: jest.fn(),
 }));
 
 const overdueService = require("../services/overdueService");
@@ -10,6 +11,7 @@ describe("overdueJob", () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     overdueService.detectAndFlagOverdue.mockResolvedValue(3);
+    overdueService.sendDueReminders.mockResolvedValue(1);
     jest.spyOn(console, "log").mockImplementation(() => {});
     jest.spyOn(console, "error").mockImplementation(() => {});
     stopOverdueJob();
@@ -22,11 +24,12 @@ describe("overdueJob", () => {
     jest.useRealTimers();
   });
 
-  it("runs detection once on demand", async () => {
-    const count = await runOnce();
+  it("runs detection and due reminders once on demand", async () => {
+    const result = await runOnce();
 
-    expect(count).toBe(3);
+    expect(result).toEqual({ overdueCount: 3, reminderCount: 1 });
     expect(overdueService.detectAndFlagOverdue).toHaveBeenCalledTimes(1);
+    expect(overdueService.sendDueReminders).toHaveBeenCalledTimes(1);
   });
 
   it("starts the job immediately and repeats using the configured interval", async () => {

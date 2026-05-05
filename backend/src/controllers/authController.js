@@ -106,9 +106,11 @@ async function login(req, res) {
   }
 
   try {
+    const ipAddress = req.headers["x-forwarded-for"]?.split(",")[0].trim() ?? req.ip;
     const { accessToken, refreshToken, user } = await loginUser(
       email,
       password,
+      ipAddress,
     );
 
     res.cookie(
