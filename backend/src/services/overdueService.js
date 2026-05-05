@@ -19,8 +19,7 @@ async function listOverdue({
   const sortOrder = order === "desc" ? "desc" : "asc";
 
   const where = {
-    status: TransactionStatus.ACTIVE,
-    dueDate: { lt: new Date() },
+    status: TransactionStatus.OVERDUE,
   };
 
   const [transactions, total] = await Promise.all([
@@ -63,7 +62,7 @@ async function listOverdue({
 async function getOverdueSummary() {
   const now = new Date();
   const overdueTransactions = await prisma.borrowingTransaction.findMany({
-    where: { status: TransactionStatus.ACTIVE, dueDate: { lt: now } },
+    where: { status: TransactionStatus.OVERDUE },
     select: { dueDate: true },
   });
 
@@ -143,8 +142,7 @@ async function getOverdueDistribution() {
   const now = new Date();
   const overdueItems = await prisma.borrowingTransaction.findMany({
     where: {
-      status: TransactionStatus.ACTIVE,
-      dueDate: { lt: now },
+      status: TransactionStatus.OVERDUE,
     },
     select: {
       dueDate: true,
