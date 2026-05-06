@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
+const auditLogger = require("./auditLogger");
 
 /**
  * Register a new user
@@ -73,6 +74,7 @@ async function registerUser({
  * Login a user
  * @param {string} email
  * @param {string} password
+ * @param {string} [ipAddress]
  * @returns {{ token: string, user: Object }}
  */
 async function loginUser(email, password, ipAddress) {
@@ -84,8 +86,13 @@ async function loginUser(email, password, ipAddress) {
 
   if (!user) {
     await prisma.auditLog.create({
-      data: { actorId: null, action: "LOGIN_FAILED", targetType: "user",
-              details: { email }, ipAddress: ipAddress ?? null },
+      data: {
+        actorId: null,
+        action: "LOGIN_FAILED",
+        targetType: "user",
+        details: { email },
+        ipAddress: ipAddress ?? null,
+      },
     });
     const error = new Error("Invalid credentials");
     error.statusCode = 401;
@@ -105,8 +112,14 @@ async function loginUser(email, password, ipAddress) {
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
     await prisma.auditLog.create({
-      data: { actorId: user.id, action: "LOGIN_FAILED", targetType: "user",
-              targetId: user.id, details: { email }, ipAddress: ipAddress ?? null },
+      data: {
+        actorId: user.id,
+        action: "LOGIN_FAILED",
+        targetType: "user",
+        targetId: user.id,
+        details: { email },
+        ipAddress: ipAddress ?? null,
+      },
     });
     const error = new Error("Invalid credentials");
     error.statusCode = 401;
@@ -137,11 +150,19 @@ async function loginUser(email, password, ipAddress) {
     },
   );
 
-  // 5. Audit successful login
-  await prisma.auditLog.create({
-    data: { actorId: user.id, action: "LOGIN", targetType: "user",
-            targetId: user.id, ipAddress: ipAddress ?? null },
-  });
+  // 5. Write login audit log (best-effort — never fails the login response)
+  prisma
+    .$transaction((tx) =>
+      auditLogger.log(tx, {
+        actorId: user.id,
+        action: "LOGIN",
+        targetType: "user",
+        targetId: user.id,
+        details: { email: user.email, role: user.role.name },
+        ipAddress: ipAddress ?? null,
+      }),
+    )
+    .catch(() => {});
 
   // 6. Return token + safe user object
   const { passwordHash, ...safeUser } = user;

@@ -6,7 +6,7 @@ const {
   getBookCounts,
 } = require("../utils/db");
 const auditLogger = require("./auditLogger");
-// const { notifyNextInQueue } = require("./reservationService"); // TODO: enable when notifications are ready
+const { notifyNextInQueue } = require("./reservationService");
 
 const DEFAULT_LOAN_DURATION_DAYS = 14;
 const DEFAULT_MAX_BOOKS_ALLOWED = 3;
@@ -216,8 +216,7 @@ async function returnBook({
       ipAddress,
     });
 
-    // TODO: enable when notifications are ready
-    // await notifyNextInQueue(transaction.bookCopy.book.id, tx);
+    await notifyNextInQueue(transaction.bookCopy.book.id, tx);
 
     return {
       transaction,

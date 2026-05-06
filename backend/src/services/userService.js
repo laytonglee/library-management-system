@@ -2,6 +2,7 @@
 const prisma = require("../config/prisma");
 const bcrypt = require("bcryptjs");
 const { createError } = require("../utils/db");
+const auditLogger = require("./auditLogger");
 
 const USER_SELECT = {
   id: true,
@@ -69,7 +70,7 @@ async function getUserById(id) {
   return user;
 }
 
-async function createUser({ fullName, username, email, password, roleId }) {
+async function createUser({ fullName, username, email, password, roleId, actorId, ipAddress }) {
   if (!fullName || !username || !email || !password) {
     throw createError(
       "fullName, username, email, and password are required",
@@ -88,51 +89,114 @@ async function createUser({ fullName, username, email, password, roleId }) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  return prisma.user.create({
-    data: { fullName, username, email, passwordHash, roleId: roleId || 1 },
-    select: USER_SELECT,
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: { fullName, username, email, passwordHash, roleId: roleId || 1 },
+      select: USER_SELECT,
+    });
+
+    await auditLogger.log(tx, {
+      actorId: actorId ?? null,
+      action: "CREATE_USER",
+      targetType: "user",
+      targetId: user.id,
+      details: { fullName, email, role: user.role.name },
+      ipAddress: ipAddress ?? null,
+    });
+
+    return user;
   });
 }
 
-async function updateUser(id, { fullName, username, email, roleId, isActive }) {
-  const user = await prisma.user.update({
-    where: { id },
-    data: {
-      ...(fullName !== undefined && { fullName }),
-      ...(username !== undefined && { username }),
-      ...(email !== undefined && { email }),
-      ...(roleId !== undefined && { roleId }),
-      ...(isActive !== undefined && { isActive }),
-    },
-    select: USER_SELECT,
+async function updateUser(id, { fullName, username, email, roleId, isActive, actorId, ipAddress }) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.user.findUnique({
+      where: { id },
+      select: { fullName: true, email: true, roleId: true, isActive: true },
+    });
+    if (!before) throw createError("User not found", 404);
+
+    const user = await tx.user.update({
+      where: { id },
+      data: {
+        ...(fullName !== undefined && { fullName }),
+        ...(username !== undefined && { username }),
+        ...(email !== undefined && { email }),
+        ...(roleId !== undefined && { roleId }),
+        ...(isActive !== undefined && { isActive }),
+      },
+      select: USER_SELECT,
+    });
+
+    const action = roleId !== undefined && roleId !== before.roleId ? "ROLE_CHANGE" : "UPDATE_USER";
+    await auditLogger.log(tx, {
+      actorId: actorId ?? null,
+      action,
+      targetType: "user",
+      targetId: id,
+      details: { before: { roleId: before.roleId }, after: { fullName, email, roleId, isActive } },
+      ipAddress: ipAddress ?? null,
+    });
+
+    return user;
   });
-  return user;
 }
 
-async function deactivateUser(id) {
-  return prisma.user.update({
-    where: { id },
-    data: { isActive: false },
-    select: {
-      id: true,
-      fullName: true,
-      isActive: true,
-      role: { select: { name: true } },
-    },
+async function deactivateUser(id, { actorId, ipAddress } = {}) {
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.update({
+      where: { id },
+      data: { isActive: false },
+      select: {
+        id: true,
+        fullName: true,
+        isActive: true,
+        role: { select: { name: true } },
+      },
+    });
+
+    await auditLogger.log(tx, {
+      actorId: actorId ?? null,
+      action: "DEACTIVATE_USER",
+      targetType: "user",
+      targetId: id,
+      details: { fullName: user.fullName },
+      ipAddress: ipAddress ?? null,
+    });
+
+    return user;
   });
 }
 
-async function deleteUser(id) {
-  const activeCount = await prisma.borrowingTransaction.count({
-    where: { borrowerId: id, status: "ACTIVE" },
+async function deleteUser(id, { actorId, ipAddress } = {}) {
+  return prisma.$transaction(async (tx) => {
+    const activeCount = await tx.borrowingTransaction.count({
+      where: { borrowerId: id, status: "ACTIVE" },
+    });
+    if (activeCount > 0) {
+      throw createError(
+        "Cannot delete user with active borrowing transactions",
+        409,
+      );
+    }
+
+    const user = await tx.user.findUnique({
+      where: { id },
+      select: { fullName: true, email: true },
+    });
+    if (!user) throw createError("User not found", 404);
+
+    await auditLogger.log(tx, {
+      actorId: actorId ?? null,
+      action: "DELETE_USER",
+      targetType: "user",
+      targetId: id,
+      details: { fullName: user.fullName, email: user.email },
+      ipAddress: ipAddress ?? null,
+    });
+
+    await tx.user.delete({ where: { id } });
   });
-  if (activeCount > 0) {
-    throw createError(
-      "Cannot delete user with active borrowing transactions",
-      409,
-    );
-  }
-  await prisma.user.delete({ where: { id } });
 }
 
 async function getUserBorrowingHistory(

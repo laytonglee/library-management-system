@@ -138,7 +138,10 @@ async function fulfillReservation({
 }) {
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
-    include: { user: { select: { id: true, fullName: true } } },
+    include: {
+      user: { select: { id: true, fullName: true } },
+      book: { select: { title: true } },
+    },
   });
 
   if (!reservation) throw createError("Reservation not found", 404);
@@ -179,14 +182,13 @@ async function fulfillReservation({
       where: { id: bookCopyId },
       data: { status: BookCopyStatus.RESERVED },
     }),
-    // TODO: enable when notifications are ready
-    // prisma.notification.create({
-    //   data: {
-    //     userId: reservation.userId,
-    //     type: "SYSTEM",
-    //     message: `Your reservation for "${reservation.user.fullName}" has been fulfilled. Please pick up the book within ${RESERVATION_EXPIRY_DAYS} days.`,
-    //   },
-    // }),
+    prisma.notification.create({
+      data: {
+        userId: reservation.userId,
+        type: "SYSTEM",
+        message: `Your reservation is ready! Please pick up "${reservation.book.title}" within ${RESERVATION_EXPIRY_DAYS} days.`,
+      },
+    }),
   ]);
 
   await prisma.$transaction(async (tx) => {
@@ -263,31 +265,24 @@ async function getQueuePosition(userId, bookId) {
   };
 }
 
-// TODO: enable when notifications are ready
-// async function notifyNextInQueue(bookId, tx) {
-//   const next = await tx.reservation.findFirst({
-//     where: { bookId, status: ReservationStatus.ACTIVE },
-//     orderBy: { createdAt: "asc" },
-//     include: {
-//       book: { select: { title: true } },
-//     },
-//   });
-//
-//   if (next) {
-//     await tx.notification.create({
-//       data: {
-//         userId: next.userId,
-//         type: "SYSTEM",
-//         message: `Good news! A copy of "${next.book.title}" is now available. Your reservation is next in the queue.`,
-//       },
-//     });
-//   }
-//
-//   return next;
-// }
-async function notifyNextInQueue(_bookId, _tx) {
-  // TODO: enable when notifications are ready
-  return null;
+async function notifyNextInQueue(bookId, tx) {
+  const next = await tx.reservation.findFirst({
+    where: { bookId, status: ReservationStatus.ACTIVE },
+    orderBy: { createdAt: "asc" },
+    include: { book: { select: { title: true } } },
+  });
+
+  if (next) {
+    await tx.notification.create({
+      data: {
+        userId: next.userId,
+        type: "SYSTEM",
+        message: `Good news! A copy of "${next.book.title}" is now available. Your reservation is next in the queue.`,
+      },
+    });
+  }
+
+  return next;
 }
 
 module.exports = {
