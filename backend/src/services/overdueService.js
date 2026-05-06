@@ -133,6 +133,43 @@ async function detectAndFlagOverdue() {
   return flagged;
 }
 
+// REQ-12 — proactive DUE_REMINDER sent once per transaction when due date is within 2 days
+async function sendDueReminders() {
+  const now = new Date();
+  const in2Days = new Date(now.getTime() + 2 * MS_PER_DAY);
+
+  const upcoming = await prisma.borrowingTransaction.findMany({
+    where: {
+      status: TransactionStatus.ACTIVE,
+      dueDate: { gte: now, lte: in2Days },
+    },
+    include: {
+      bookCopy: { select: { book: { select: { title: true } } } },
+      notifications: {
+        where: { type: NotificationType.DUE_REMINDER },
+        select: { id: true },
+      },
+    },
+  });
+
+  let reminded = 0;
+  for (const t of upcoming) {
+    if (t.notifications.length > 0) continue;
+    const dueDateStr = t.dueDate.toISOString().split("T")[0];
+    const title = t.bookCopy.book.title;
+    await prisma.notification.create({
+      data: {
+        userId: t.borrowerId,
+        transactionId: t.id,
+        type: NotificationType.DUE_REMINDER,
+        message: `"${title}" is due on ${dueDateStr} — please return it on time`,
+      },
+    });
+    reminded++;
+  }
+  return reminded;
+}
+
 async function runOverdueCheck() {
   const overdueCount = await detectAndFlagOverdue();
   return { overdueCount, newNotifications: overdueCount };
@@ -214,6 +251,7 @@ module.exports = {
   getOverdueSummary,
   runOverdueCheck,
   detectAndFlagOverdue,
+  sendDueReminders,
   getOverdueDistribution,
   sendDueReminders,
 };

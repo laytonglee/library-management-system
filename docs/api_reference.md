@@ -12,12 +12,16 @@
 
 ### 🔐 Auth
 
-| Method | Endpoint         | Access   | Description                        |
-| ------ | ---------------- | -------- | ---------------------------------- |
-| `POST` | `/auth/register` | Public   | Register new user account          |
-| `POST` | `/auth/login`    | Public   | Login, returns JWT token           |
-| `POST` | `/auth/logout`   | Any auth | Invalidate session/token           |
-| `GET`  | `/auth/me`       | Any auth | Get current logged-in user profile |
+| Method | Endpoint                  | Access   | Description                                        |
+| ------ | ------------------------- | -------- | -------------------------------------------------- |
+| `POST` | `/auth/register`          | Public   | Register new user account (student/teacher only)   |
+| `POST` | `/auth/register/admin`    | admin    | Create any-role user account                       |
+| `POST` | `/auth/login`             | Public   | Login — sets `accessToken` + `refreshToken` cookies; writes LOGIN audit log |
+| `POST` | `/auth/refresh`           | Public   | Issue new accessToken from refreshToken cookie     |
+| `POST` | `/auth/logout`            | Any auth | Clear auth cookies                                 |
+| `GET`  | `/auth/me`                | Any auth | Get current logged-in user profile                 |
+
+> Failed logins (wrong password, unknown email) write a `LOGIN_FAILED` audit log entry.
 
 **`POST /auth/register` body:**
 
@@ -209,21 +213,64 @@
 
 ### 📊 Reports
 
-| Method | Endpoint                  | Access           | Description                      |
-| ------ | ------------------------- | ---------------- | -------------------------------- |
-| `GET`  | `/reports/inventory`      | librarian, admin | Current inventory status summary |
-| `GET`  | `/reports/usage`          | librarian, admin | Borrowing frequency over time    |
-| `GET`  | `/reports/popular-books`  | librarian, admin | Most borrowed books              |
-| `GET`  | `/reports/overdue-trends` | librarian, admin | Overdue stats over time          |
-| `GET`  | `/reports/export`         | librarian, admin | Download report as CSV           |
+| Method | Endpoint                         | Access           | Description                      |
+| ------ | -------------------------------- | ---------------- | -------------------------------- |
+| `GET`  | `/reports/inventory`             | librarian, admin | Current inventory status summary |
+| `GET`  | `/reports/borrowing`             | librarian, admin | Borrowing frequency over time    |
+| `GET`  | `/reports/popular`               | librarian, admin | Most borrowed books              |
+| `GET`  | `/reports/overdue-trends`        | librarian, admin | Overdue stats over time          |
+| `GET`  | `/reports/:type/export`          | librarian, admin | Download named report as CSV     |
 
-**`GET /reports/export` query params:**
+**`GET /reports/:type/export`** — `:type` is one of `inventory`, `borrowing`, `popular`, `overdue-trends`.
 
+Optional query params for borrowing and popular:
 ```
-?type=inventory|usage|popular_books|overdue_trends
-&from=2026-01-01
-&to=2026-03-01
+?startDate=2026-01-01&endDate=2026-03-01&limit=10
 ```
+
+---
+
+### 🏠 Dashboard
+
+| Method | Endpoint     | Access           | Description                                                      |
+| ------ | ------------ | ---------------- | ---------------------------------------------------------------- |
+| `GET`  | `/dashboard` | librarian, admin | Summary stats: total books, active loans, overdue count, members |
+
+---
+
+### 🔖 Reservations
+
+| Method   | Endpoint                         | Access       | Description                           |
+| -------- | -------------------------------- | ------------ | ------------------------------------- |
+| `POST`   | `/reservations`                  | Any auth     | Reserve a book                        |
+| `GET`    | `/reservations`                  | Any auth     | List own reservations                 |
+| `GET`    | `/reservations/:bookId/position` | Any auth     | Get queue position for a book         |
+| `PUT`    | `/reservations/:id/cancel`       | Any auth     | Cancel a reservation                  |
+| `PUT`    | `/reservations/:id/fulfill`      | librarian    | Mark reservation fulfilled (checkout) |
+
+---
+
+### 📥 Data Import / Export (UC-11)
+
+| Method | Endpoint                    | Access | Description                                              |
+| ------ | --------------------------- | ------ | -------------------------------------------------------- |
+| `GET`  | `/import/export/books`      | admin  | Download all books as CSV (id, title, author, isbn, ...) |
+| `POST` | `/import/books`             | admin  | Import books from CSV file; upserts on isbn or title+author |
+
+**`POST /import/books`** — multipart/form-data, field name `file`, `.csv` extension required.
+
+CSV format (header row required):
+```
+title,author,isbn,publisher,publicationYear,category,description
+Clean Code,Robert C. Martin,9780132350884,Prentice Hall,2008,Programming,
+```
+
+Response:
+```json
+{ "success": true, "data": { "imported": 12, "skipped": 1 } }
+```
+
+Rows without `title` and `author` are skipped. Categories are auto-created if they don't exist. Writes one `DATA_IMPORT` audit log entry per request.
 
 ---
 
@@ -236,11 +283,13 @@
 **`GET /audit-logs` query params:**
 
 ```
-?action=CHECKOUT|RETURN|LOGIN|ROLE_CHANGE
-&actor_id=3
-&from=2026-02-01
+?action=CHECKOUT|RETURN|LOGIN|LOGIN_FAILED|OVERDUE_FLAG|DATA_IMPORT|ROLE_CHANGE
+&actorId=3
+&targetType=transaction|user|book
 &page=1&limit=50
 ```
+
+Logged actions: `LOGIN`, `LOGIN_FAILED`, `CHECKOUT`, `RETURN`, `OVERDUE_FLAG`, `DATA_IMPORT`, `BOOK_EDIT`, `ROLE_CHANGE`, `USER_DEACTIVATE`.
 
 ---
 
@@ -262,12 +311,13 @@
 | `/reports`    | Reports Dashboard    | librarian, admin | `GET /reports/*`, `GET /reports/export`                   |
 | `/audit-logs` | Audit Log Viewer     | admin            | `GET /audit-logs`                                         |
 | `/settings`   | Settings             | admin            | `GET/PUT /borrowing-policies`, `GET /roles`               |
+| `/import`     | Data Import          | admin            | `POST /import/books`, `GET /import/export/books`          |
 
 ---
 
 ## Frontend API Service Structure (suggested)
 
-```
+```text
 src/
   services/
     authService.js         ← /auth/*

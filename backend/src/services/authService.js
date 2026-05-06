@@ -85,6 +85,10 @@ async function loginUser(email, password, ipAddress) {
   });
 
   if (!user) {
+    await prisma.auditLog.create({
+      data: { actorId: null, action: "LOGIN_FAILED", targetType: "user",
+              details: { email }, ipAddress: ipAddress ?? null },
+    });
     const error = new Error("Invalid credentials");
     error.statusCode = 401;
     throw error;
@@ -102,6 +106,10 @@ async function loginUser(email, password, ipAddress) {
   // 3. Compare password
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
+    await prisma.auditLog.create({
+      data: { actorId: user.id, action: "LOGIN_FAILED", targetType: "user",
+              targetId: user.id, details: { email }, ipAddress: ipAddress ?? null },
+    });
     const error = new Error("Invalid credentials");
     error.statusCode = 401;
     throw error;
@@ -131,6 +139,7 @@ async function loginUser(email, password, ipAddress) {
     },
   );
 
+<<<<<<< HEAD
   // 5. Write login audit log (best-effort — never fails the login response)
   prisma.$transaction((tx) =>
     auditLogger.log(tx, {
@@ -142,6 +151,13 @@ async function loginUser(email, password, ipAddress) {
       ipAddress: ipAddress ?? null,
     }),
   ).catch(() => {});
+=======
+  // 5. Audit successful login
+  await prisma.auditLog.create({
+    data: { actorId: user.id, action: "LOGIN", targetType: "user",
+            targetId: user.id, ipAddress: ipAddress ?? null },
+  });
+>>>>>>> b609f86d91f47ee4b5899f75ea6970ad41844ba1
 
   // 6. Return token + safe user object
   const { passwordHash, ...safeUser } = user;
