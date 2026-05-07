@@ -55,7 +55,7 @@ async function getTransactionById(id) {
 
 async function getActiveTransactions() {
   return prisma.borrowingTransaction.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: { in: ["ACTIVE", "OVERDUE"] } },
     include: {
       borrower: { select: { id: true, fullName: true, email: true } },
       bookCopy: {
