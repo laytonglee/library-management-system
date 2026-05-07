@@ -97,7 +97,7 @@ export default function ReturnPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
-              Active Loans
+              Active &amp; Overdue Loans
             </CardTitle>
             <CardDescription>
               Search and select the transaction to return.

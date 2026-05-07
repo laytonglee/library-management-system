@@ -162,7 +162,7 @@ async function returnBook({
     }
 
     const activeTransaction = await tx.borrowingTransaction.findFirst({
-      where: { bookCopyId, status: TransactionStatus.ACTIVE },
+      where: { bookCopyId, status: { in: [TransactionStatus.ACTIVE, TransactionStatus.OVERDUE] } },
       orderBy: { checkoutDate: "desc" },
       select: { id: true, bookCopyId: true, dueDate: true },
     });
